@@ -41,10 +41,10 @@ button{ -webkit-tap-highlight-color:transparent; }
 /* weather */
 .tier-wxstrip{background:none; padding:0; margin-bottom:14px; box-shadow:none;}
 .wx-strip{font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums;}
-.wx-strip .wx-icon{font-size:18px; margin:0 4px;}
+.wx-strip .wx-icon{font-size:18px; line-height:1; flex:none;}
 .wx-strip{display:flex; gap:8px;}
-.wx-bubble{flex:1 1 0%; background:#fff; border-radius:16px; padding:10px 8px; font-weight:600; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 1px 2px rgba(0,0,0,.04);}
-.wx-bubble .wx-clothing{margin:0;}
+.wx-bubble{flex:1 1 0%; background:#fff; border-radius:16px; padding:10px 8px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04);}
+.wx-bubble .wx-clothing{margin:0; line-height:1; flex:none;}
 .wx-clothing{font-size:16px; margin:0 2px;}
 .wx-strip{cursor:pointer;}
 .wx-abadge{color:#B7791F; font-weight:600;}
