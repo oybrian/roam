@@ -26,6 +26,7 @@ body{margin:0; background:var(--bg); color:var(--text);
   width:40px; height:40px; font-size:21px; cursor:pointer; color:var(--blue);
   display:flex; align-items:center; justify-content:center;}
 .icon-btn:active{background:var(--press); transform:scale(.92);}
+#refresh-btn{font-size:25px;}
 @keyframes spin360{to{transform:rotate(360deg);}}
 .icon-btn.spinning{animation:spin360 .7s linear infinite;}
 .mini-btn{transition:transform .1s ease, opacity .1s ease;}
@@ -1309,14 +1310,7 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked){
     const destName=S.dir==="inbound"
       ? t("home")
       : (isSearchMode() ? (searchDest().name||searchDest().addr||"") : (destInfoRaw().name||""));
-    if(destName){
-      const wd=document.createElement("div");
-      wd.className="leg-sub";
-      wd.style.margin="8px 0";
-      // walk_to: "Walk ~{min} min from {place} to {station}" - reuse with station as destination
-      wd.textContent=t("walk_to",{min:Math.round(arrWalkMin),place:stationName(lastLeg.to),station:destName});
-      box.appendChild(wd);
-    }
+    // (Walk detail line removed for simplicity - walk time is included in "Arrive by")
   }
   // final home/work arrival as its own line after the last card (like leave-by)
   const lastTrip=legResults[legResults.length-1].trip;
