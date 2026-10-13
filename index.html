@@ -1730,7 +1730,7 @@ function initSettings(){
     btn.disabled=true;
     try{
       const hl=$("set-home").value.trim();
-      if(hl&&hl!==S.home.label){
+      if(hl&&(hl!==S.home.label||S.home.lat==null||S.home.lon==null)){
         const hi=$("set-home");
         if(hi.dataset.lat&&hi.dataset.lon) S.home={label:hl,lat:+hi.dataset.lat,lon:+hi.dataset.lon};
         else{ const g=await geocode(hl); if(g) S.home={label:hl,lat:g.lat,lon:g.lon}; else S.home.label=hl; }
@@ -1740,11 +1740,12 @@ function initSettings(){
         const al=$("set-dest-"+i).value.trim();
         const prev=S.dests[i]||{};
         let lat=prev.lat||null, lon=prev.lon||null, label=al;
-        if(al&&al!==prev.label){
+        if(!al){ lat=null; lon=null; }
+        else if(al!==prev.label||lat==null||lon==null){
           const ai=$("set-dest-"+i);
           if(ai.dataset.lat&&ai.dataset.lon){ lat=+ai.dataset.lat; lon=+ai.dataset.lon; }
           else{ const g=await geocode(al); if(g){ lat=g.lat; lon=g.lon; } }
-        }else if(!al){ lat=null; lon=null; }
+        }
         const prevLegs=(S.dests[i]&&S.dests[i].legs)||[];
         let wv=null, wdv=null;
         if(i<2){
