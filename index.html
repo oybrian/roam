@@ -1000,14 +1000,14 @@ function clothingKey(c){
 }
 function clothingIcon(c){
   // c = celsius. Returns emoji icons per Brian's guide.
-  if(c>=28) return "\uD83C\uDFBD"; // 🎽 tank top
-  if(c>=23) return "\uD83D\uDC55"; // 👕 t-shirt
-  if(c>=20) return "\uD83D\uDC54"; // 👔 shirt
-  if(c>=17) return "\uD83E\uDDE5"; // 🧥 coat (light jacket)
-  if(c>=12) return "\uD83E\uDDE5"; // 🧥 coat
-  if(c>=9) return "\uD83E\uDDE5\uD83E\uDDE3"; // 🧥🧣 coat+scarf
-  if(c>=5) return "\uD83E\uDDE5\uD83E\uDDE3"; // 🧥🧣
-  return "\uD83E\uDDE5\uD83E\uDDE3\uD83E\uDDE4"; // 🧥🧣🧤
+  if(c>=28) return "\uD83C\uDFBD"; // 🎽
+  if(c>=23) return "\uD83D\uDC55"; // 👕
+  if(c>=20) return "\uD83D\uDC54"; // 👔
+  if(c>=17) return "\uD83E\uDDE5"; // 🧥
+  if(c>=12) return "\uD83E\uDDE5\uD83D\uDC56"; // 🧥👖
+  if(c>=9) return "\uD83E\uDDE5\uD83E\uDDE3"; // 🧥🧣
+  if(c>=5) return "\uD83E\uDDE5\uD83E\uDDE3\uD83E\uDDE4"; // 🧥🧣🧤
+  return "\uD83E\uDDE5\uD83E\uDDE3\uD83E\uDDE4\u2744\uFE0F"; // 🧥🧣🧤❄️
 }
 function renderWeather(w, alerts){
   alerts=alerts||[];
