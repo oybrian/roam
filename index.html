@@ -1620,7 +1620,8 @@ function renderDestEditors(){
       continue;
     }
     box.innerHTML=
-      '<div class="f-label" style="margin-bottom:4px">'+esc(t("dest_n",{n:i+1}))+'</div>'+
+      '<div class="f-label" style="margin-bottom:4px">'+esc(t("dest_n",{n:i+1}))+
+        ((d.lat!=null&&d.lon!=null)?' <span style="color:var(--green)">\uD83D\uDCCD</span>':' <span style="color:var(--red)">\u26A0\uFE0F no location</span>')+'</div>'+
       '<input class="f-input" id="set-dest-name-'+i+'" placeholder="'+esc(t("dest_name_ph"))+'" value="'+esc(d.name||"")+'" autocomplete="off" style="margin-bottom:6px">'+
       '<div class="pick-wrap"><input class="f-input" id="set-dest-'+i+'" placeholder="'+esc(t("dest_ph"))+'" value="'+esc(d.label||"")+'" autocomplete="off">'+
       '<div class="pick-list" id="dest-ac-'+i+'"></div></div>'+
