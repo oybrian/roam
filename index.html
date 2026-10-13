@@ -242,7 +242,7 @@ function wmoText(code){
 const I18N={
 en:{
 settings_title:"StandClear settings",done:"Done",language:"Language",
-home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",walk_time:"Walk time (minutes)",walk_auto:"Auto",walk_time_home:"Walk: home \u2194 station (min)",walk_time_dest:"Walk: destination \u2194 station (min)",dest_place:"destination",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",walk_time:"Walk time (minutes)",walk_auto:"Auto",lines_hint:"Tap to pick lines — all selected = first train wins",walk_time_home:"Walk: home \u2194 station (min)",walk_time_dest:"Walk: destination \u2194 station (min)",dest_place:"destination",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one leg.",
 leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
 save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
@@ -845,27 +845,42 @@ async function fetchFeeds(lines){
   return feeds;
 }
 
+function legLines(leg){
+  if(Array.isArray(leg.lines)&&leg.lines.length) return leg.lines.slice();
+  if(leg.line) return [leg.line];
+  const st=ST_BY_ID[leg.from];
+  return st?(st.lines||[]).slice():[];
+}
 async function computeRoute(legs, startAfter){
-  const feeds=await fetchFeeds(legs.map(l=>l.line));
+  const feeds=await fetchFeeds([...new Set(legs.flatMap(l=>legLines(l)))]);
   const now=Math.floor(Date.now()/1000);
   const out=[];
   let after=(startAfter!=null?startAfter:now-60), strict=(startAfter!=null);
   for(let li=0; li<legs.length; li++){
     const leg=legs[li];
-    const feed=feeds[FEED_FOR[leg.line]];
+    const lines=legLines(leg);
     // transfers need a 3-min buffer to physically change trains
     const effAfter=(li>0&&strict)?after+180:after;
-    let trips=feed?findTrips(feed,leg.line,leg.from,leg.to,effAfter,strict):[];
-    const ts=trips.slice(0,5);
+    let allTrips=[];
+    let feedOk=false;
+    for(const ln of lines){
+      const feed=feeds[FEED_FOR[ln]];
+      if(feed) feedOk=true;
+      const trs=feed?findTrips(feed,ln,leg.from,leg.to,effAfter,strict):[];
+      trs.forEach(x=>x.line=ln);
+      allTrips=allTrips.concat(trs);
+    }
+    allTrips.sort((a,b)=>a.bt-b.bt);
+    const ts=allTrips.slice(0,5);
     const t=ts.length?ts[0]:null;
-    out.push({leg:leg, trip:t, trips:ts, feedOk:!!feed});
+    out.push({leg:leg, trip:t, trips:ts, feedOk:feedOk, line:t?t.line:(lines[0]||"")});
     if(t&&t.at){ after=t.at; strict=true; }
   }
   return out;
 }
 
 function hasDisruption(legResults){
-  return legResults.some(r=>{ const st=statusOf(r.leg.line); return st.cls==="red"||st.cls==="amber"; });
+  return legResults.some(r=>{ const st=statusOf(r.line||r.leg.line); return st.cls==="red"||st.cls==="amber"; });
 }
 
 /* Fastest-route recommendations when delayed: evaluate nearby stations x lines,
@@ -986,11 +1001,18 @@ function renderWeather(w, alerts){
 }
 // expandable timetable: previous train + next 2 trains on card tap
 const expandedLegs=new Set();
-async function legTimetable(leg, dispBt){
-  const feeds=await fetchFeeds([leg.line]);
-  const feed=feeds[FEED_FOR[leg.line]];
-  if(!feed) return null;
-  const all=findTrips(feed, leg.line, leg.from, leg.to, dispBt-2400, false);
+async function legTimetable(leg, dispBt, chosenLine){
+  const lines=legLines(leg);
+  const feeds=await fetchFeeds(lines);
+  let all=[];
+  for(const ln of lines){
+    const feed=feeds[FEED_FOR[ln]];
+    if(!feed) continue;
+    const trs=findTrips(feed, ln, leg.from, leg.to, dispBt-2400, false);
+    trs.forEach(x=>x.line=ln);
+    all=all.concat(trs);
+  }
+  all.sort((a,b)=>a.bt-b.bt);
   let prev=null;
   const next=[];
   for(const tr of all){
@@ -1002,11 +1024,11 @@ async function legTimetable(leg, dispBt){
 function ttHtml(dispBt, tt){
   let h="";
   if(tt&&tt.prev){
-    h+='<div class="tt-row tt-prev"><span>'+fmtClock(tt.prev.bt)+'</span><span class="tt-tag">'+esc(t("tt_prev"))+'</span></div>';
+    h+='<div class="tt-row tt-prev">'+(tt.prev.line?lineBadge(tt.prev.line):"")+'<span>'+fmtClock(tt.prev.bt)+'</span><span class="tt-tag">'+esc(t("tt_prev"))+'</span></div>';
   }
   h+='<div class="tt-row tt-cur"><span>▶ '+fmtClock(dispBt)+'</span><span class="tt-tag">'+cdHtml(dispBt)+'</span></div>';
   if(tt) for(const tr of tt.next){
-    h+='<div class="tt-row"><span>'+fmtClock(tr.bt)+'</span><span class="tt-tag">'+cdHtml(tr.bt)+'</span></div>';
+    h+='<div class="tt-row">'+(tr.line?lineBadge(tr.line):"")+'<span>'+fmtClock(tr.bt)+'</span><span class="tt-tag">'+cdHtml(tr.bt)+'</span></div>';
   }
   return h;
 }
@@ -1058,19 +1080,19 @@ function makeTappable(cardEl, key, leg, trip){
 }
 function renderLegs(legResults, box){
   legResults.forEach((r,i)=>{
-    const leg=r.leg, st=statusOf(leg.line);
+    const leg=r.leg, rline=r.line||leg.line, st=statusOf(rline);
     if(i===0){
       // first leg: full card with boarding countdown
       const d=document.createElement("div");
       d.className="leg";
-      let html='<div class="leg-head">'+lineBadge(leg.line)+'<span class="dot '+dotCls(st.cls)+'" title="'+esc(sevLabel(st.cls))+'"></span><span>'+esc(stationName(leg.from))+' &rarr; '+esc(stationName(leg.to))+'</span>'+(leg.auto?'<span class="leg-sub" style="margin-left:6px">auto</span>':'')+'</div>';
+      let html='<div class="leg-head">'+lineBadge(rline)+'<span class="dot '+dotCls(st.cls)+'" title="'+esc(sevLabel(st.cls))+'"></span><span>'+esc(stationName(leg.from))+' &rarr; '+esc(stationName(leg.to))+'</span>'+(leg.auto?'<span class="leg-sub" style="margin-left:6px">auto</span>':'')+'</div>';
       if(r.trip){
         const _m=Math.max(0,Math.round((r.trip.bt-Date.now()/1000)/60));
-        html+='<div class="leg-time">'+(_m<=0?'<b>'+esc(leg.line)+' boarding now</b>':esc(leg.line)+' leaves at <b>'+fmtClock(r.trip.bt)+'</b> <span class="leg-sub">(in '+_m+'min)</span>')+'</div>';
+        html+='<div class="leg-time">'+(_m<=0?'<b>'+esc(rline)+' boarding now</b>':esc(rline)+' leaves at <b>'+fmtClock(r.trip.bt)+'</b> <span class="leg-sub">(in '+_m+'min)</span>')+'</div>';
       }else if(!r.feedOk){
-        html+='<div class="leg-sub">'+esc(t("no_feed",{line:leg.line}))+'</div>';
+        html+='<div class="leg-sub">'+esc(t("no_feed",{line:rline}))+'</div>';
       }else{
-        html+='<div class="leg-sub">'+esc(t("no_trains",{line:leg.line}))+'</div>';
+        html+='<div class="leg-sub">'+esc(t("no_trains",{line:rline}))+'</div>';
       }
       if(st.text) html+='<div class="alert-text">'+esc(st.text)+'</div>';
       d.innerHTML=html;
@@ -1082,18 +1104,18 @@ function renderLegs(legResults, box){
       const t1=prev.trip, t2=r.trip;
       const td=document.createElement("div");
       td.className="leg transfer";
-      let th='<div class="leg-head">'+lineBadge(leg.line)+'<span class="dot '+dotCls(st.cls)+'" title="'+esc(sevLabel(st.cls))+'"></span><span>'+esc(t("transfer_at",{station:stationName(prev.leg.to)}))+'</span></div>';
+      let th='<div class="leg-head">'+lineBadge(rline)+'<span class="dot '+dotCls(st.cls)+'" title="'+esc(sevLabel(st.cls))+'"></span><span>'+esc(t("transfer_at",{station:stationName(prev.leg.to)}))+'</span></div>';
       if(t1&&t1.at){
-        th+='<div class="leg-time">'+esc(prev.leg.line)+' arrives at <b>'+fmtClock(t1.at)+'</b></div>';
+        th+='<div class="leg-time">'+esc(prev.line||prev.leg.line)+' arrives at <b>'+fmtClock(t1.at)+'</b></div>';
         if(t2){
           const wait=Math.max(0,Math.round((t2.bt-t1.at)/60));
-          th+='<div class="leg-time">'+esc(leg.line)+' leaves at <b>'+fmtClock(t2.bt)+'</b></div>';
+          th+='<div class="leg-time">'+esc(rline)+' leaves at <b>'+fmtClock(t2.bt)+'</b></div>';
           th+='<div class="leg-sub">'+(wait>0?t("transfer_wait",{n:wait}):t("transfer_now"))+'.</div>';
         }else{
-          th+='<div class="leg-sub">'+esc(t("waiting_conn",{line:leg.line}))+'</div>';
+          th+='<div class="leg-sub">'+esc(t("waiting_conn",{line:rline}))+'</div>';
         }
       }else{
-        th+='<div class="leg-sub">'+esc(t("transfer_to",{line:leg.line}))+'</div>';
+        th+='<div class="leg-sub">'+esc(t("transfer_to",{line:rline}))+'</div>';
       }
       if(st.text) th+='<div class="alert-text">'+esc(st.text)+'</div>';
       td.innerHTML=th;
@@ -1544,14 +1566,26 @@ function makePicker(el, leg, which, showChips){
     if(!chips) return;
     chips.innerHTML="";
     if(st&&st.lines.length>1){
+      if(!Array.isArray(leg.lines)) leg.lines=leg.line?[leg.line]:[];
       st.lines.forEach(l=>{
         const b=document.createElement("button");
         b.type="button";
-        b.className="chip"+(l===leg.line?" sel":"");
+        const sel=leg.lines.length===0||leg.lines.includes(l);
+        b.className="chip"+(sel?" sel":"");
         b.textContent=l;
-        b.onclick=()=>{ leg.line=l; saveSettings(); renderPicked(); };
+        b.onclick=()=>{ tap();
+          if(!Array.isArray(leg.lines)) leg.lines=[];
+          const ix=leg.lines.indexOf(l);
+          if(ix>=0) leg.lines.splice(ix,1); else leg.lines.push(l);
+          saveSettings(); renderPicked();
+        };
         chips.appendChild(b);
       });
+      const hint=document.createElement("div");
+      hint.className="f-hint";
+      hint.style.marginTop="4px";
+      hint.textContent=t("lines_hint");
+      chips.appendChild(hint);
     }
   }
   function filter(){
@@ -1565,7 +1599,7 @@ function makePicker(el, leg, which, showChips){
       d.innerHTML=s.lines.map(lineBadge).join("")+"<span>"+esc(s.name)+"</span>";
       d.onclick=()=>{
         leg[which]=s.id;
-        if(!s.lines.includes(leg.line)) leg.line=s.lines[0];
+        leg.lines=[];
         saveSettings();
         input.value=s.name;
         list.classList.remove("open");
@@ -1677,7 +1711,7 @@ function renderDestEditors(){
         const dd=S.dests[idx];
         if(!Array.isArray(dd.legs)) dd.legs=[];
         if(dd.legs.length>=4){ showErr(t("max_legs")); return; }
-        dd.legs.push({line:"", from:"", to:""});
+        dd.legs.push({lines:[], from:"", to:""});
         saveSettings(); renderLegList(idx);
       };
     })(i);
