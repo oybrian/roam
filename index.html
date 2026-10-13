@@ -1592,10 +1592,9 @@ async function loadAll(){
             if(dest.lat!=null&&dest.lon!=null&&ls) arrWalkMin=await walkMinutes(ls.lat,ls.lon,dest.lat,dest.lon);
           }catch(e){}
         }
-        // Build up to 3 departure options: one earlier train (if not yet departed)
-        // plus the next catchable trains. Each option re-anchors the whole route
-        // on its train so transfers and arrival all reflect that departure.
-        // Feeds are cached, not refetched.
+        // Build up to 2 departure options from the next catchable trains.
+        // Each option re-anchors the whole route on its train so transfers
+        // and arrival all reflect that departure. Feeds are cached, not refetched.
         // Label: leave-origin time - arrive-destination time (walks included).
         departOptionsCache=[];
         departIdx=0;
@@ -1603,17 +1602,7 @@ async function loadAll(){
           const nowSec=Date.now()/1000;
           const trips=(legResults[0]&&legResults[0].trips)||[];
           const wm=(walkMin!=null?walkMin:0);
-          const seenBt=new Set();
-          const picked=[];
-          // One earlier train: the earliest that hasn't departed yet
-          // (even if not comfortably catchable with full walk time)
-          const earlier=trips.find(tr=>tr.bt>=nowSec&&tr.bt-wm*60<nowSec);
-          if(earlier){ picked.push(earlier); seenBt.add(earlier.bt); }
-          for(const tr of trips){
-            if(picked.length>=3) break;
-            if(tr.bt-wm*60>=nowSec&&!seenBt.has(tr.bt)){ picked.push(tr); seenBt.add(tr.bt); }
-          }
-          const catchable=picked;
+          const catchable=trips.filter(tr=>tr.bt-wm*60>=nowSec).slice(0,2);
           for(const tr of catchable){
             const lr=await computeRoute(legs, tr.bt-1);
             const at=lr[0]&&lr[0].trip;
