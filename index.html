@@ -40,9 +40,10 @@ button{ -webkit-tap-highlight-color:transparent; }
 /* weather */
 .tier-wxstrip{padding:10px 16px;}
 .wx-strip{font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums;}
-.wx-strip .wx-icon{font-size:18px; margin:0 6px;}
-.wx-strip .wx-date{font-weight:600; margin-right:6px;}
-.wx-strip .wx-time{color:#666; margin-right:6px;}
+.wx-strip .wx-icon{font-size:18px; margin:0 4px;}
+.wx-bubble{display:inline-block; background:#f2f2f7; border-radius:16px; padding:6px 12px; margin-right:8px; font-weight:600;}
+.wx-bubble:last-child{margin-right:0;}
+.wx-bubble .wx-clothing{margin:0;}
 .wx-clothing{font-size:16px; margin:0 2px;}
 .wx-strip{cursor:pointer;}
 .wx-abadge{color:#B7791F; font-weight:600;}
@@ -1033,13 +1034,13 @@ function renderWeather(w, alerts){
     const strip=$("wx-strip");
     const cTemp=Math.round(cur.temperature_2m);
     const now=new Date();
-    const dateStr=now.toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric"});
+    const dateStr=now.toLocaleDateString("en-US",{month:"numeric",day:"numeric"})+" "+now.toLocaleDateString("en-US",{weekday:"short"});
     const timeStr=now.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
-    let h='<span class="wx-date">'+esc(dateStr)+'</span> '+
-      '<span class="wx-time">'+esc(timeStr)+'</span> '+
-      '<b>'+tempBoth(cur.temperature_2m)+'</b> '+
+    let h='<span class="wx-bubble">'+esc(dateStr)+'</span>'+
+      '<span class="wx-bubble">'+esc(timeStr)+'</span>'+
+      '<span class="wx-bubble"><b>'+tempBoth(cur.temperature_2m)+'</b> '+
       '<span class="wx-icon">'+(WMO_ICON[code]||"")+'</span>'+
-      '<span class="wx-clothing" title="'+esc(t("clothing_"+clothingKey(cTemp)))+'">'+clothingIcon(cTemp)+'</span>';
+      '<span class="wx-clothing" title="'+esc(t("clothing_"+clothingKey(cTemp)))+'">'+clothingIcon(cTemp)+'</span></span>';
     if(alerts.length){
       h+=' <span class="wx-abadge">⚠️ '+esc(alerts[0].event)+(alerts.length>1?" +"+(alerts.length-1):"")+'</span>';
     }
