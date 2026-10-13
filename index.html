@@ -1255,7 +1255,7 @@ let departIdx=0;
 function renderRoute(legResults, walkMin, arrWalkMin, isLocked){
   const box=$("legs");
   box.innerHTML="";
-  const walkEmoji=S.dir==="inbound"?"\uD83D\uDD7A":"\uD83D\uDEB6";
+  const walkEmoji=(S.dir==="inbound"||gpsOrigin)?"\uD83D\uDD7A":"\uD83D\uDEB6";
   if(isLocked&&lockedPlan){
     // Frozen trip: show departed state with unlock option
     const lv=document.createElement("div");
@@ -1443,7 +1443,7 @@ async function renderAltDetail(opt){
     if(firstBt){
       const lv=document.createElement("div");
       lv.className="leave-line";
-      lv.innerHTML=(S.dir==="inbound"?"\uD83D\uDD7A":"\uD83D\uDEB6")+" Leave by <b>"+fmtClock(firstBt-opt.walkMin*60)+"</b>";
+      lv.innerHTML=((S.dir==="inbound"||gpsOrigin)?"\uD83D\uDD7A":"\uD83D\uDEB6")+" Leave by <b>"+fmtClock(firstBt-opt.walkMin*60)+"</b>";
       box.appendChild(lv);
     }
     renderLegs(res, box);
