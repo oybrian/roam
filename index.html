@@ -1640,7 +1640,8 @@ async function loadAll(){
         }
         const _arrEst=(departOptionsCache[departIdx]&&departOptionsCache[departIdx].arriveDest!=null)?departOptionsCache[departIdx].arriveDest:null;
         renderRoute(legResults, walkMin, arrWalkMin, false, _arrEst);
-        const alts=hasDisruption(legResults)?await findFastRoutes(legResults):[];
+        const _noTrains=legResults.some(r=>!r.trip&&r.feedOk);
+        const alts=(hasDisruption(legResults)||_noTrains)?await findFastRoutes(legResults):[];
         renderAlts(alts, legResults, arrWalkMin);
       }
       $("updated").textContent=t("updated",{time:fmtHM()});
