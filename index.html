@@ -242,7 +242,7 @@ function wmoText(code){
 const I18N={
 en:{
 settings_title:"Roam settings",done:"Done",language:"Language",
-home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",walk_time:"Walk time (minutes)",walk_auto:"Auto",dest_place:"destination",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",walk_time:"Walk time (minutes)",walk_auto:"Auto",walk_time_home:"Walk: home \u2194 station (min)",walk_time_dest:"Walk: destination \u2194 station (min)",dest_place:"destination",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one leg.",
 leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
 save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
@@ -1426,7 +1426,8 @@ async function loadAll(){
         let legResults=await computeRoute(legs);
         let walkMin=null;
         const dCur=S.dests[S.destIndex]||{};
-        if(S.dir==="outbound"&&dCur.walkMin!=null) walkMin=dCur.walkMin;
+        if(S.dir==="outbound"){ if(dCur.walkMin!=null) walkMin=dCur.walkMin; }
+        else{ if(dCur.walkDestMin!=null) walkMin=dCur.walkDestMin; }
         if(walkMin==null){
           try{
             const bs=ST_BY_ID[legResults[0].leg.from];
@@ -1435,11 +1436,15 @@ async function loadAll(){
         }
         // final walk: last station -> destination (same for all departure options)
         let arrWalkMin=null;
-        try{
-          const dest=destInfo();
-          const ls=ST_BY_ID[legResults[legResults.length-1].leg.to];
-          if(dest.lat!=null&&dest.lon!=null&&ls) arrWalkMin=await walkMinutes(ls.lat,ls.lon,dest.lat,dest.lon);
-        }catch(e){}
+        if(S.dir==="outbound"){ if(dCur.walkDestMin!=null) arrWalkMin=dCur.walkDestMin; }
+        else{ if(dCur.walkMin!=null) arrWalkMin=dCur.walkMin; }
+        if(arrWalkMin==null){
+          try{
+            const dest=destInfo();
+            const ls=ST_BY_ID[legResults[legResults.length-1].leg.to];
+            if(dest.lat!=null&&dest.lon!=null&&ls) arrWalkMin=await walkMinutes(ls.lat,ls.lon,dest.lat,dest.lon);
+          }catch(e){}
+        }
         // Build up to 2 departure options from the next catchable trains.
         // Each option re-anchors the whole route on its train so transfers
         // and arrival all reflect that departure. Feeds are cached, not refetched.
@@ -1625,8 +1630,10 @@ function renderDestEditors(){
       '<input class="f-input" id="set-dest-name-'+i+'" placeholder="'+esc(t("dest_name_ph"))+'" value="'+esc(d.name||"")+'" autocomplete="off" style="margin-bottom:6px">'+
       '<div class="pick-wrap"><input class="f-input" id="set-dest-'+i+'" placeholder="'+esc(t("dest_ph"))+'" value="'+esc(d.label||"")+'" autocomplete="off">'+
       '<div class="pick-list" id="dest-ac-'+i+'"></div></div>'+
-      '<div class="f-label" style="margin-top:8px">'+esc(t("walk_time"))+'</div>'+
+      '<div class="f-label" style="margin-top:8px">'+esc(t("walk_time_home"))+'</div>'+
       '<input class="f-input" id="set-dest-walk-'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="'+esc(t("walk_auto"))+'" value="'+(d.walkMin!=null?d.walkMin:"")+'" autocomplete="off" style="margin-bottom:4px">'+
+      '<div class="f-label" style="margin-top:4px">'+esc(t("walk_time_dest"))+'</div>'+
+      '<input class="f-input" id="set-dest-walkd-'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="'+esc(t("walk_auto"))+'" value="'+(d.walkDestMin!=null?d.walkDestMin:"")+'" autocomplete="off" style="margin-bottom:4px">'+
       '<div class="f-label" style="margin-top:8px"><span>'+esc(t("route_legs"))+'</span> <span class="f-hint">'+esc(t("legs_hint"))+'</span></div>'+
       '<div id="leg-list-'+i+'"></div>'+
       '<button class="btn block" id="add-leg-'+i+'" type="button">'+esc(t("add_leg"))+'</button>';
@@ -1739,12 +1746,14 @@ function initSettings(){
           else{ const g=await geocode(al); if(g){ lat=g.lat; lon=g.lon; } }
         }else if(!al){ lat=null; lon=null; }
         const prevLegs=(S.dests[i]&&S.dests[i].legs)||[];
-        let wv=null;
+        let wv=null, wdv=null;
         if(i<2){
           const wi=$("set-dest-walk-"+i);
           if(wi){ const pv=parseInt(wi.value,10); wv=isNaN(pv)?null:Math.min(120,Math.max(1,pv)); }
+          const wdi=$("set-dest-walkd-"+i);
+          if(wdi){ const pv=parseInt(wdi.value,10); wdv=isNaN(pv)?null:Math.min(120,Math.max(1,pv)); }
         }
-        S.dests[i]={name:(i===2?"Search":nm), label:label, lat:lat, lon:lon, legs:prevLegs, walkMin:wv};
+        S.dests[i]={name:(i===2?"Search":nm), label:label, lat:lat, lon:lon, legs:prevLegs, walkMin:wv, walkDestMin:wdv};
       }
       saveSettings();
       updateDestToggle();
