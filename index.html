@@ -161,7 +161,7 @@ button{font:inherit;}
 
   <section class="tier" id="tier-route">
     <h2 id="h-route">Your route</h2>
-    <div class="seg" id="dest-toggle"><button class="seg-btn sel" data-dest="0"></button><button class="seg-btn" data-dest="1"></button><button class="seg-btn" data-dest="2">\uD83D\uDD0D</button></div>
+    <div class="seg" id="dest-toggle"></div>
     <div class="seg" id="dir-toggle2" style="margin-top:8px"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
     <div id="search-bar" style="display:none; margin-top:10px">
       <div class="pick-wrap">
@@ -219,10 +219,9 @@ const WMO_ICON = {0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"�
 const DEFAULTS = {
   home:{label:"", lat:null, lon:null},
   dests:[
-    {name:"", label:"", lat:null, lon:null, legs:[]},
-    {name:"", label:"", lat:null, lon:null, legs:[]},
-    {name:"Search", label:"", lat:null, lon:null}
+    {name:"", label:"", lat:null, lon:null, legs:[], walkMin:null, walkDestMin:null}
   ],
+  searchDest:{name:"", label:"", lat:null, lon:null, legs:[]},
   destIndex:0,
   dir:"outbound",
   lang:"en"
@@ -242,7 +241,7 @@ function wmoText(code){
 const I18N={
 en:{
 settings_title:"StandClear settings",done:"Done",language:"Language",
-home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",walk_time:"Walk time (minutes)",walk_auto:"Auto",lines_hint:"Tap to pick lines — all selected = first train wins",walk_time_home:"Walk: home \u2194 station (min)",walk_time_dest:"Walk: destination \u2194 station (min)",dest_place:"destination",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",walk_time:"Walk time (minutes)",walk_auto:"Auto",lines_hint:"Tap to pick lines — all selected = first train wins",add_dest:"Add destination",walk_time_home:"Walk: home \u2194 station (min)",walk_time_dest:"Walk: destination \u2194 station (min)",dest_place:"destination",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one leg.",
 leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
 save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
@@ -457,10 +456,17 @@ function loadSettings(){
       const p = JSON.parse(raw);
       const d = JSON.parse(JSON.stringify(DEFAULTS));
       for(const k of Object.keys(d)){ if(p[k]!==undefined) d[k]=p[k]; }
-      if(!Array.isArray(d.dests)||d.dests.length!==3){
+      if(!Array.isArray(d.dests)||!d.dests.length){
         d.dests=JSON.parse(JSON.stringify(DEFAULTS.dests));
       }
-      if(typeof d.destIndex!=="number"||d.destIndex<0||d.destIndex>2) d.destIndex=0;
+      // Migrate old 3-entry format (search at index 2) to searchDest
+      if(d.dests.length===3&&!d.searchDest){
+        const s=d.dests[2];
+        if(s&&(s.label||s.name)){ d.searchDest={name:s.name||"",label:s.label||"",lat:s.lat??null,lon:s.lon??null,legs:[]}; }
+        d.dests=d.dests.slice(0,2);
+      }
+      const maxIdx=d.dests.length; // search mode = length
+      if(typeof d.destIndex!=="number"||d.destIndex<0||d.destIndex>maxIdx) d.destIndex=0;
       d.lang="en";
       return d;
     }
@@ -805,8 +811,10 @@ function autoLegs(){
   return best?best.legs:null;
 }
 
+function isSearchMode(){ return S.destIndex>= (S.dests||[]).length; }
+function searchDest(){ return S.searchDest||{}; }
 function getLegs(){
-  if(S.destIndex<2){
+  if(!isSearchMode()){
     const d=S.dests[S.destIndex]||{};
     const manual=(d.legs||[]).filter(l=>l&&l.from&&l.to)
       .map(l=>({lines:Array.isArray(l.lines)&&l.lines.length?l.lines.slice():(l.line?[l.line]:[]), from:l.from, to:l.to, kind:"ride"}));
@@ -822,6 +830,7 @@ function originInfo(){
   return S.dir==="inbound" ? destInfoRaw() : S.home;
 }
 function destInfoRaw(){
+  if(isSearchMode()) return searchDest();
   return (S.dests&&S.dests[S.destIndex])||{};
 }
 function destInfo(){
@@ -1362,7 +1371,7 @@ async function renderAltDetail(opt){
     const lastTrip=res[res.length-1].trip;
     if(lastTrip&&lastTrip.at){
       let destWalkMin=null;
-      const dCur=S.dests[S.destIndex]||{};
+      const dCur=destInfoRaw();
       if(S.dir==="outbound"){ if(dCur.walkDestMin!=null) destWalkMin=dCur.walkDestMin; }
       else{ if(dCur.walkMin!=null) destWalkMin=dCur.walkMin; }
       if(destWalkMin==null){
@@ -1479,7 +1488,7 @@ async function loadAll(){
       }else{
         let legResults=await computeRoute(legs);
         let walkMin=null;
-        const dCur=S.dests[S.destIndex]||{};
+        const dCur=destInfoRaw();
         if(S.dir==="outbound"){ if(dCur.walkMin!=null) walkMin=dCur.walkMin; }
         else{ if(dCur.walkDestMin!=null) walkMin=dCur.walkDestMin; }
         if(walkMin==null){
@@ -1683,21 +1692,18 @@ function attachAddrAC(inputId, listId){
 function renderDestEditors(){
   const wrap=$("dest-list");
   wrap.innerHTML="";
-  for(let i=0;i<3;i++){
+  if(!Array.isArray(S.dests)||!S.dests.length) S.dests=[{name:"",label:"",legs:[]}];
+  const n=S.dests.length;
+  for(let i=0;i<n;i++){
     const d=S.dests[i]||{name:"",label:""};
     const box=document.createElement("div");
     box.style.marginTop="14px";
     box.style.paddingTop="10px";
     if(i>0) box.style.borderTop="1px solid rgba(0,0,0,.08)";
-    if(i===2){
-      box.innerHTML='<div class="f-label" style="margin-bottom:4px">\uD83D\uDD0D '+esc(t("search_mode"))+'</div>'+
-        '<div class="small">'+esc(t("search_mode_hint"))+'</div>';
-      wrap.appendChild(box);
-      continue;
-    }
     box.innerHTML=
-      '<div class="f-label" style="margin-bottom:4px">'+esc(t("dest_n",{n:i+1}))+
-        ((d.lat!=null&&d.lon!=null)?' <span style="color:var(--green)">\uD83D\uDCCD</span>':' <span style="color:var(--red)">\u26A0\uFE0F no location</span>')+'</div>'+
+      '<div class="f-label" style="margin-bottom:4px"><span>'+esc(t("dest_n",{n:i+1}))+
+        ((d.lat!=null&&d.lon!=null)?' <span style="color:var(--green)">\uD83D\uDCCD</span>':' <span style="color:var(--red)">\u26A0\uFE0F no location</span>')+'</span>'+
+        (n>1?' <button class="chip" id="rm-dest-'+i+'" type="button" style="float:right">'+esc(t("remove"))+'</button>':'')+'</div>'+
       '<input class="f-input" id="set-dest-name-'+i+'" placeholder="'+esc(t("dest_name_ph"))+'" value="'+esc(d.name||"")+'" autocomplete="off" style="margin-bottom:6px">'+
       '<div class="pick-wrap"><input class="f-input" id="set-dest-'+i+'" placeholder="'+esc(t("dest_ph"))+'" value="'+esc(d.label||"")+'" autocomplete="off">'+
       '<div class="pick-list" id="dest-ac-'+i+'"></div></div>'+
@@ -1720,7 +1726,33 @@ function renderDestEditors(){
         saveSettings(); renderLegList(idx);
       };
     })(i);
+    if(n>1){
+      (function(idx){
+        const rb=$("rm-dest-"+idx);
+        if(rb) rb.onclick=()=>{ tap();
+          S.dests.splice(idx,1);
+          if(S.destIndex>=S.dests.length) S.destIndex=S.dests.length-1;
+          saveSettings(); renderDestEditors(); updateDestToggle(); loadAll();
+        };
+      })(i);
+    }
   }
+  const addBtn=document.createElement("button");
+  addBtn.className="btn block";
+  addBtn.type="button";
+  addBtn.style.marginTop="12px";
+  addBtn.textContent="+ "+t("add_dest");
+  addBtn.onclick=()=>{ tap();
+    S.dests.push({name:"",label:"",legs:[],walkMin:null,walkDestMin:null});
+    saveSettings(); renderDestEditors(); updateDestToggle();
+  };
+  wrap.appendChild(addBtn);
+  const sbox=document.createElement("div");
+  sbox.style.marginTop="14px"; sbox.style.paddingTop="10px";
+  sbox.style.borderTop="1px solid rgba(0,0,0,.08)";
+  sbox.innerHTML='<div class="f-label" style="margin-bottom:4px">\uD83D\uDD0D '+esc(t("search_mode"))+'</div>'+
+    '<div class="small">'+esc(t("search_mode_hint"))+'</div>';
+  wrap.appendChild(sbox);
 }
 function renderLegList(di){
   const wrap=$("leg-list-"+di);
@@ -1763,15 +1795,35 @@ function applyI18n(){
   renderDestEditors();
 }
 function updateDestToggle(){
-  document.querySelectorAll("#dest-toggle .seg-btn").forEach(x=>{
-    const i=+x.dataset.dest;
-    if(i===2){ x.textContent="\uD83D\uDD0D"; }
-    else{
-      const d=(S.dests&&S.dests[i])||{};
-      x.textContent=d.name||t("dest_n",{n:i+1});
+  const wrap=$("dest-toggle");
+  if(!wrap) return;
+  wrap.innerHTML="";
+  const n=(S.dests||[]).length;
+  for(let i=0;i<n;i++){
+    const d=S.dests[i]||{};
+    const b=document.createElement("button");
+    b.className="seg-btn"+(i===S.destIndex?" sel":"");
+    b.textContent=d.name||t("dest_n",{n:i+1});
+    b.onclick=()=>{ tap();
+      if(S.destIndex!==i){
+        S.destIndex=i;
+        unlockTripSilent(); saveSettings();
+        updateDestToggle(); syncSearchBar(); loadAll();
+      }
+    };
+    wrap.appendChild(b);
+  }
+  const sb=document.createElement("button");
+  sb.className="seg-btn"+(isSearchMode()?" sel":"");
+  sb.textContent="\uD83D\uDD0D";
+  sb.onclick=()=>{ tap();
+    if(!isSearchMode()){
+      S.destIndex=n;
+      unlockTripSilent(); saveSettings();
+      updateDestToggle(); syncSearchBar(); loadAll();
     }
-    x.classList.toggle("sel", i===S.destIndex);
-  });
+  };
+  wrap.appendChild(sb);
   syncDirToggle();
 }
 /* select-all on focus for numeric text inputs (iOS Safari: type=number ignores select()) */
@@ -1807,7 +1859,8 @@ function initSettings(){
         if(hi.dataset.lat&&hi.dataset.lon) S.home={label:hl,lat:+hi.dataset.lat,lon:+hi.dataset.lon};
         else{ const g=await geocode(hl); if(g) S.home={label:hl,lat:g.lat,lon:g.lon}; else S.home.label=hl; }
       }
-      for(let i=0;i<2;i++){
+      const nd=S.dests.length;
+      for(let i=0;i<nd;i++){
         const nm=$("set-dest-name-"+i).value.trim();
         const al=$("set-dest-"+i).value.trim();
         const prev=S.dests[i]||{};
@@ -1820,13 +1873,13 @@ function initSettings(){
         }
         const prevLegs=(S.dests[i]&&S.dests[i].legs)||[];
         let wv=null, wdv=null;
-        if(i<2){
+        {
           const wi=$("set-dest-walk-"+i);
           if(wi){ const pv=parseInt(wi.value,10); wv=isNaN(pv)?null:Math.min(120,Math.max(1,pv)); }
           const wdi=$("set-dest-walkd-"+i);
           if(wdi){ const pv=parseInt(wdi.value,10); wdv=isNaN(pv)?null:Math.min(120,Math.max(1,pv)); }
         }
-        S.dests[i]={name:(i===2?"Search":nm), label:label, lat:lat, lon:lon, legs:prevLegs, walkMin:wv, walkDestMin:wdv};
+        S.dests[i]={name:nm, label:label, lat:lat, lon:lon, legs:prevLegs, walkMin:wv, walkDestMin:wdv};
       }
       saveSettings();
       updateDestToggle();
@@ -1852,36 +1905,23 @@ document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(b=>{
     }
   };
 });
-document.querySelectorAll("#dest-toggle .seg-btn").forEach(b=>{
-  b.onclick=()=>{
-    tap();
-    const i=+b.dataset.dest;
-    if(S.destIndex!==i){
-      S.destIndex=i;
-      unlockTripSilent();
-      saveSettings();
-      updateDestToggle();
-      syncSearchBar();
-      loadAll();
-    }
-  };
-});
+
 function syncDirToggle(){
   document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(x=>{
     x.classList.toggle("sel", x.dataset.dir===S.dir);
   });
   const ob=$("dir-outbound-btn");
   if(ob){
-    const d=S.dests[S.destIndex]||{};
+    const d=destInfoRaw();
     const nm=(d.name||"").trim()||t("to_dest");
     ob.textContent=t("to_prefix")+nm;
   }
 }
 function syncSearchBar(){
   const sb=$("search-bar");
-  if(S.destIndex===2){
+  if(isSearchMode()){
     sb.style.display="block";
-    const d=S.dests[2]||{};
+    const d=searchDest();
     if(d.label) $("dest-search").value=d.label;
   }else{
     sb.style.display="none";
@@ -1908,7 +1948,7 @@ function initDestSearch(){
           dv.innerHTML="<div><b>"+esc(f.line1)+"</b>"+(f.line2?"<br><span class=pick-line>"+esc(f.line2)+"</span>":"")+"</div>";
           dv.onclick=()=>{
             tap();
-            S.dests[2]={name:f.line1, label:f.full, lat:+a.lat, lon:+a.lon, legs:[]};
+            S.searchDest={name:f.line1, label:f.full, lat:+a.lat, lon:+a.lon, legs:[]};
             inp.value=f.full;
             list.innerHTML="";
             saveSettings();
