@@ -924,8 +924,18 @@ async function findFastRoutes(legResults){
   async function evalLegs(legList, after){
     const res=await computeRoute(legList, after);
     const last=res[res.length-1];
-    if(last&&last.trip&&last.trip.at&&res.every(r=>r.trip)) return last.trip.at;
-    return null;
+    if(!(last&&last.trip&&last.trip.at&&res.every(r=>r.trip))) return null;
+    // include final walk to destination for fair comparison with main route
+    let walkTailMin=0;
+    try{
+      const dest=destInfo();
+      const ls=ST_BY_ID[last.leg.to];
+      if(dest.lat!=null&&dest.lon!=null&&ls){
+        const wm=await walkMinutes(ls.lat,ls.lon,dest.lat,dest.lon);
+        if(wm!=null) walkTailMin=wm;
+      }
+    }catch(e){}
+    return {arrivalSec:last.trip.at+walkTailMin*60, walkTailMin:walkTailMin};
   }
   for(const c of short){
     const walkMin=Math.max(1,Math.round(c.d/4.5*60));
@@ -938,8 +948,8 @@ async function findFastRoutes(legResults){
         const sig=ll.map(l=>l.line+":"+l.from+">"+l.to).join("|");
         if(sig===normalSig||seen.has(sig)) continue;
         seen.add(sig);
-        const arr=await evalLegs(ll, after);
-        if(arr) options.push({legs:ll, walkMin:walkMin, arrivalSec:arr});
+        const ev=await evalLegs(ll, after);
+        if(ev) options.push({legs:ll, walkMin:walkMin, arrivalSec:ev.arrivalSec, walkTailMin:ev.walkTailMin});
       }
       // (b) ride to the rejoin point, then continue the rest of the route
       if(tailGreen){
@@ -950,8 +960,8 @@ async function findFastRoutes(legResults){
           const sig=ll.map(l=>l.line+":"+l.from+">"+l.to).join("|");
           if(sig===normalSig||seen.has(sig)) continue;
           seen.add(sig);
-          const arr=await evalLegs(ll, after);
-          if(arr) options.push({legs:ll, walkMin:walkMin, arrivalSec:arr});
+          const ev=await evalLegs(ll, after);
+          if(ev) options.push({legs:ll, walkMin:walkMin, arrivalSec:ev.arrivalSec, walkTailMin:ev.walkTailMin});
         }
       }
     }
@@ -1259,9 +1269,9 @@ function selectDepartOption(i, walkMin, arrWalkMin){
   }catch(e){}
   const opt=departOptionsCache[i];
   renderRoute(opt.legResults, walkMin, arrWalkMin, false);
-  renderAlts([], opt.legResults);
+  renderAlts([], opt.legResults, null);
 }
-function renderAlts(options, legResults){
+function renderAlts(options, legResults, arrWalkMin){
   const box=$("alts");
   box.innerHTML="";
   const disrupted=hasDisruption(legResults);
@@ -1281,8 +1291,11 @@ function renderAlts(options, legResults){
   p.className="leg-sub";
   p.textContent=t("fastest_opts");
   box.appendChild(p);
-  const normalArr=(legResults.length&&legResults[legResults.length-1].trip)
-    ? legResults[legResults.length-1].trip.at : null;
+  // Compare with walk included (fair against main route's "Arrive by")
+  let normalArr=null;
+  if(legResults.length&&legResults[legResults.length-1].trip&&legResults[legResults.length-1].trip.at){
+    normalArr=legResults[legResults.length-1].trip.at+(arrWalkMin!=null?arrWalkMin*60:0);
+  }
   options.forEach(opt=>{
     const total=Math.max(1,Math.round((opt.arrivalSec-Date.now()/1000)/60));
     const d=document.createElement("div");
@@ -1480,11 +1493,11 @@ async function loadAll(){
       const legs=getLegs();
       if(!legs.length){
         $("legs").innerHTML='<div class="leg-sub">'+esc(t("no_route"))+'</div>';
-        renderAlts([], []);
+        renderAlts([], [], null);
       }else if(lockedPlan&&lockedPlan.destIndex===S.destIndex){
         // Locked trip: don't recompute, just re-render the frozen plan
         renderRoute(lockedPlan.legResults, lockedPlan.walkMin, lockedPlan.arrWalkMin, true);
-        renderAlts([], lockedPlan.legResults);
+        renderAlts([], lockedPlan.legResults, lockedPlan.arrWalkMin);
       }else{
         let legResults=await computeRoute(legs);
         let walkMin=null;
@@ -1553,7 +1566,7 @@ async function loadAll(){
         }
         renderRoute(legResults, walkMin, arrWalkMin);
         const alts=hasDisruption(legResults)?await findFastRoutes(legResults):[];
-        renderAlts(alts, legResults);
+        renderAlts(alts, legResults, arrWalkMin);
       }
       $("updated").textContent=t("updated",{time:fmtHM()});
     }
