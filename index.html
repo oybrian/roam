@@ -1343,8 +1343,9 @@ function renderAlts(options, legResults, arrWalkMin){
   const tier=$("tier-alt");
   box.innerHTML="";
   const disrupted=hasDisruption(legResults);
+  const noTrains=legResults.some(r=>!r.trip&&r.feedOk);
   if(!options.length){
-    if(disrupted){
+    if(disrupted||noTrains){
       tier.style.display="";
       const d=document.createElement("div");
       d.className="leg-sub";
