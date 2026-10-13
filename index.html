@@ -101,8 +101,8 @@ button{font:inherit;}
 .btn.primary:active{background:#0062cc;}
 .btn.block{width:100%; margin-top:12px;}
 .updated{color:var(--muted); font-size:12px; text-align:center; margin-top:8px;}
-.alt{border:none; border-radius:16px; padding:13px 14px; margin:10px 0; background:var(--bg); cursor:pointer;}
-.alt:active{background:#e8e8ed;}
+.alt{border:none; border-radius:16px; padding:13px 14px; margin:10px 0; background:var(--bg); cursor:pointer; transition:transform .12s ease, opacity .12s ease;}
+.alt:active{transform:scale(.98); opacity:.85; background:#e8e8ed;}
 .alt b{font-size:15px;}
 .allclear{color:var(--green); font-weight:600;}
 /* settings sheet */
@@ -1267,7 +1267,7 @@ function renderAlts(options, legResults){
     d.innerHTML='<div class="leg-head">'+badges+'<span>'+t("arrive_at",{time:fmtClock(opt.arrivalSec)})+'</span></div>'+
       '<div class="leg-sub">'+sub+'</div>'+cmp+
       '<div class="leg-sub">'+esc(t("tap_timing"))+'</div>';
-    d.onclick=()=>{ viewingAlt=opt; loadAll(); window.scrollTo(0,0); };
+    d.onclick=()=>{ tap(); viewingAlt=opt; loadAll(); window.scrollTo(0,0); };
     box.appendChild(d);
   });
 }
