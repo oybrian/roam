@@ -745,10 +745,10 @@ function autoLegs(){
       const H=hn.s, W=wn.s;
       if(H.id===W.id) continue;
       const shared=(H.lines||[]).filter(l=>(W.lines||[]).includes(l));
-      for(const line of shared){
+      if(shared.length){
         const rideKm=havKm(H.lat,H.lon,W.lat,W.lon);
         consider(hn.d*WALK + rideKm*RIDE + wn.d*WALK,
-          [{line:line, from:H.id, to:W.id, kind:"ride", auto:true}]);
+          [{lines:shared.slice(), from:H.id, to:W.id, kind:"ride", auto:true}]);
       }
       for(const lh of (H.lines||[])){
         for(const lw of (W.lines||[])){
@@ -808,10 +808,10 @@ function autoLegs(){
 function getLegs(){
   if(S.destIndex<2){
     const d=S.dests[S.destIndex]||{};
-    const manual=(d.legs||[]).filter(l=>l&&l.line&&l.from&&l.to)
-      .map(l=>({line:l.line, from:l.from, to:l.to, kind:"ride"}));
+    const manual=(d.legs||[]).filter(l=>l&&l.from&&l.to)
+      .map(l=>({lines:Array.isArray(l.lines)&&l.lines.length?l.lines.slice():(l.line?[l.line]:[]), from:l.from, to:l.to, kind:"ride"}));
     if(manual.length){
-      if(S.dir==="inbound") return manual.slice().reverse().map(l=>({line:l.line, from:l.to, to:l.from, kind:"ride"}));
+      if(S.dir==="inbound") return manual.slice().reverse().map(l=>({lines:l.lines, from:l.to, to:l.from, kind:"ride"}));
       return manual;
     }
   }
