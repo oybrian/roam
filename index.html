@@ -165,7 +165,7 @@ button{font:inherit;}
     <h2 id="h-route">Your route</h2>
     <div class="seg" id="dest-toggle"></div>
     <div class="seg" id="dir-toggle2" style="display:none"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
-    <button id="take-me-home-btn" class="btn" style="width:100%;">📍 Take me home</button>
+    <button id="take-me-home-btn" class="btn" style="width:100%;">🏠 Take me home</button>
     <div id="search-bar" style="display:none; margin-top:12px">
       <div class="pick-wrap">
         <input class="f-input" id="dest-search" placeholder="Search destination..." autocomplete="off" style="padding-right:40px">
@@ -491,7 +491,7 @@ function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",
 function fmtClockShort(sec){ return fmtClock(sec).replace(/\s?[AP]M$/i,""); }
 function fmtClock(sec){ const d=new Date(sec*1000); const l=(typeof S!=="undefined"&&S.lang)||"en"; if(l==="ko"||l==="zh"||l==="ja"||l==="fr"){ return d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:TZ}); } return d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:TZ}); }
 function fmtHM(){ return new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",second:"2-digit",timeZone:TZ}); }
-function tempBoth(f){ return Math.round(f)+"°F ("+Math.round((f-32)*5/9)+"°C)"; }
+function tempBoth(c){ return Math.round(c)+"°C"; }
 function havKm(a,b,c,d){
   const R=6371, t=Math.PI/180;
   const h=Math.sin((c-a)*t/2)**2 + Math.cos(a*t)*Math.cos(c*t)*Math.sin((d-b)*t/2)**2;
@@ -555,7 +555,7 @@ async function walkMinutes(aLat,aLon,bLat,bLon){
 async function fetchWeather(lat,lon){
   const u="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
     "&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max"+
-    "&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York&forecast_days=1";
+    "&temperature_unit=celsius&wind_speed_unit=kmh&timezone=America%2FNew_York&forecast_days=1";
   const r=await fetch(u);
   return await r.json();
 }
@@ -1029,11 +1029,10 @@ function renderWeather(w, alerts){
   try{
     const cur=w.current, daily=w.daily, code=cur.weather_code;
     const strip=$("wx-strip");
-    const cTemp=Math.round((cur.temperature_2m-32)*5/9);
+    const cTemp=Math.round(cur.temperature_2m);
     let h='<span class="wx-icon">'+(WMO_ICON[code]||"")+'</span>'+
       '<b>'+tempBoth(cur.temperature_2m)+'</b> '+
-      '<span class="wx-clothing" title="'+esc(t("clothing_"+clothingKey(cTemp)))+'">'+clothingIcon(cTemp)+'</span> '+
-      esc(wmoText(code));
+      '<span class="wx-clothing" title="'+esc(t("clothing_"+clothingKey(cTemp)))+'">'+clothingIcon(cTemp)+'</span>';
     if(alerts.length){
       h+=' <span class="wx-abadge">⚠️ '+esc(alerts[0].event)+(alerts.length>1?" +"+(alerts.length-1):"")+'</span>';
     }
@@ -1048,7 +1047,7 @@ function renderWeather(w, alerts){
       strip.parentNode.appendChild(d);
     }
     const hi=Math.round(daily.temperature_2m_max[0])+"°", lo=Math.round(daily.temperature_2m_min[0])+"°";
-    const wind=cur.wind_speed_10m!=null?Math.round(cur.wind_speed_10m)+" mph":"—";
+    const wind=cur.wind_speed_10m!=null?Math.round(cur.wind_speed_10m)+" km/h":"—";
     const rain=daily.precipitation_probability_max&&daily.precipitation_probability_max[0]!=null?daily.precipitation_probability_max[0]+"%":"—";
     let dh='<span style="color:var(--muted)">H '+hi+' L '+lo+' · 💨 '+wind+' · 🌧️ '+rain+'</span>';
     for(const al of alerts){
@@ -1336,20 +1335,23 @@ function selectDepartOption(i, walkMin, arrWalkMin){
 }
 function renderAlts(options, legResults, arrWalkMin){
   const box=$("alts");
+  const tier=$("tier-alt");
   box.innerHTML="";
   const disrupted=hasDisruption(legResults);
   if(!options.length){
-    const d=document.createElement("div");
     if(disrupted){
+      tier.style.display="";
+      const d=document.createElement("div");
       d.className="leg-sub";
       d.textContent=t("no_faster");
+      box.appendChild(d);
     }else{
-      d.className="allclear";
-      d.textContent=t("all_clear");
+      // All clear: hide the ALTERNATIVES section entirely
+      tier.style.display="none";
     }
-    box.appendChild(d);
     return;
   }
+  tier.style.display="";
   const p=document.createElement("div");
   p.className="leg-sub";
   p.textContent=t("fastest_opts");
@@ -2005,7 +2007,7 @@ function takeMeHome(){
     return;
   }
   const btn=$("take-me-home-btn");
-  if(btn){ btn.disabled=true; btn.textContent="📍 ..."; }
+  if(btn){ btn.disabled=true; btn.textContent="🏠 ..."; }
   navigator.geolocation.getCurrentPosition(
     (pos)=>{
       const glat=pos.coords.latitude, glon=pos.coords.longitude;
@@ -2023,12 +2025,12 @@ function takeMeHome(){
       S.dir="inbound";
       S.searchActive=false;
       viewingAlt=null;
-      if(btn){ btn.disabled=false; btn.textContent="📍 "+t("take_me_home"); }
+      if(btn){ btn.disabled=false; btn.textContent="🏠 "+t("take_me_home"); }
       saveSettings();
       loadAll();
     },
     (err)=>{
-      if(btn){ btn.disabled=false; btn.textContent="📍 "+t("take_me_home"); }
+      if(btn){ btn.disabled=false; btn.textContent="🏠 "+t("take_me_home"); }
       showErr(t("gps_denied"));
     },
     {enableHighAccuracy:true, timeout:10000, maximumAge:60000}
@@ -2106,7 +2108,7 @@ syncSearchBar();
 (function(){
   const thb=$("take-me-home-btn");
   if(thb){
-    try{ thb.textContent="📍 "+t("take_me_home"); }catch(e){ thb.textContent="📍 Take me home"; }
+    try{ thb.textContent="🏠 "+t("take_me_home"); }catch(e){ thb.textContent="🏠 Take me home"; }
     thb.onclick=()=>{ tap(); takeMeHome(); };
   }
 })();
