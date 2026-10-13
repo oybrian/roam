@@ -166,9 +166,10 @@ button{font:inherit;}
     <div class="seg" id="dest-toggle"></div>
     <div class="seg" id="dir-toggle2" style="display:none"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
     <button id="take-me-home-btn" class="btn" style="width:100%;">📍 Take me home</button>
-    <div id="search-bar" style="display:none; margin-top:10px">
+    <div id="search-bar" style="display:none; margin-top:12px">
       <div class="pick-wrap">
-        <input class="f-input" id="dest-search" placeholder="Search destination..." autocomplete="off">
+        <input class="f-input" id="dest-search" placeholder="Search destination..." autocomplete="off" style="padding-right:40px">
+        <button id="dest-search-clear" aria-label="Clear" style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); width:28px; height:28px; border:none; border-radius:50%; background:#e5e5ea; color:#666; font-size:16px; line-height:1; cursor:pointer; padding:0">×</button>
         <div class="pick-list" id="dest-search-ac"></div>
       </div>
     </div>
@@ -2053,15 +2054,20 @@ function syncSearchBar(){
     sb.style.display="block";
     const d=searchDest();
     if(d.label) $("dest-search").value=d.label;
+    $("dest-search-clear").style.display=$("dest-search").value?"block":"none";
   }else{
     sb.style.display="none";
   }
 }
 function initDestSearch(){
-  const inp=$("dest-search"), list=$("dest-search-ac");
+  const inp=$("dest-search"), list=$("dest-search-ac"), clr=$("dest-search-clear");
   let t=null, lastQ="";
+  const syncClear=()=>{ clr.style.display=inp.value?"block":"none"; };
+  clr.addEventListener("click",(e)=>{ e.stopPropagation(); tap();
+    inp.value=""; list.innerHTML=""; lastQ=""; syncClear(); inp.focus(); });
   // reuse address autocomplete, but on select: save as dest 2 and reload
   inp.addEventListener("input",()=>{
+    syncClear();
     clearTimeout(t);
     const q=inp.value.trim();
     if(q.length<3){list.innerHTML="";return;}
