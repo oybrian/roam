@@ -95,6 +95,7 @@ button{ -webkit-tap-highlight-color:transparent; }
 .transfer{background:var(--bg);}
 .alert-text{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.5;}
 button{font:inherit;}
+#take-me-home-btn{margin-bottom:12px;}
 .btn{background:var(--seg); color:var(--text); border:none; border-radius:12px;
   padding:10px 14px; font-weight:600; cursor:pointer;}
 .btn:active{background:#d8d8de;}
@@ -163,8 +164,8 @@ button{font:inherit;}
   <section class="tier" id="tier-route">
     <h2 id="h-route">Your route</h2>
     <div class="seg" id="dest-toggle"></div>
-    <div class="seg" id="dir-toggle2" style="margin-top:8px"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
-    <button id="take-me-home-btn" class="btn" style="margin-top:8px; width:100%;">📍 Take me home</button>
+    <div class="seg" id="dir-toggle2"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
+    <button id="take-me-home-btn" class="btn" style="width:100%;">📍 Take me home</button>
     <div id="search-bar" style="display:none; margin-top:10px">
       <div class="pick-wrap">
         <input class="f-input" id="dest-search" placeholder="Search destination..." autocomplete="off">
