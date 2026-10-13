@@ -162,7 +162,7 @@ button{font:inherit;}
   <section class="tier" id="tier-route">
     <h2 id="h-route">Your route</h2>
     <div class="seg" id="dest-toggle"><button class="seg-btn sel" data-dest="0"></button><button class="seg-btn" data-dest="1"></button><button class="seg-btn" data-dest="2">\uD83D\uDD0D</button></div>
-    <div class="seg" id="dir-toggle2" style="margin-top:8px"><button class="seg-btn sel" data-dir="outbound">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
+    <div class="seg" id="dir-toggle2" style="margin-top:8px"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
     <div id="search-bar" style="display:none; margin-top:10px">
       <div class="pick-wrap">
         <input class="f-input" id="dest-search" placeholder="Search destination..." autocomplete="off">
@@ -247,7 +247,7 @@ route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one l
 leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
 save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
 max_legs:"Maximum 4 legs.",station_ph:"Type station name…",
-to_work:"To Work",to_home:"To Home",your_route:"Your route",alternatives:"Alternatives",
+to_work:"To Work",to_home:"To Home",to_prefix:"To ",to_dest:"Dest",your_route:"Your route",alternatives:"Alternatives",
 wind:"Wind",rain:"Rain",home:"home",work:"work",
 walk_to:"Walk ~{min} min from {place} to {station}",
 add_addr:"Add your {place} address in Settings for walk time.",
@@ -850,9 +850,12 @@ async function computeRoute(legs, startAfter){
   const now=Math.floor(Date.now()/1000);
   const out=[];
   let after=(startAfter!=null?startAfter:now-60), strict=(startAfter!=null);
-  for(const leg of legs){
+  for(let li=0; li<legs.length; li++){
+    const leg=legs[li];
     const feed=feeds[FEED_FOR[leg.line]];
-    let trips=feed?findTrips(feed,leg.line,leg.from,leg.to,after,strict):[];
+    // transfers need a 3-min buffer to physically change trains
+    const effAfter=(li>0&&strict)?after+180:after;
+    let trips=feed?findTrips(feed,leg.line,leg.from,leg.to,effAfter,strict):[];
     const ts=trips.slice(0,5);
     const t=ts.length?ts[0]:null;
     out.push({leg:leg, trip:t, trips:ts, feedOk:!!feed});
@@ -1730,6 +1733,7 @@ function updateDestToggle(){
     }
     x.classList.toggle("sel", i===S.destIndex);
   });
+  syncDirToggle();
 }
 /* select-all on focus for numeric text inputs (iOS Safari: type=number ignores select()) */
 function selectAllOnFocus(el){
@@ -1827,6 +1831,12 @@ function syncDirToggle(){
   document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(x=>{
     x.classList.toggle("sel", x.dataset.dir===S.dir);
   });
+  const ob=$("dir-outbound-btn");
+  if(ob){
+    const d=S.dests[S.destIndex]||{};
+    const nm=(d.name||"").trim()||t("to_dest");
+    ob.textContent=t("to_prefix")+nm;
+  }
 }
 function syncSearchBar(){
   const sb=$("search-bar");
