@@ -534,9 +534,9 @@ async function walkMinutes(aLat,aLon,bLat,bLon){
     const j=await r.json();
     // NOTE: the public OSRM demo server sometimes returns car-like durations
     // for the foot profile, so derive walk time from route distance instead.
-    if(j.routes&&j.routes[0]&&j.routes[0].distance) return (j.routes[0].distance/1000)/4.0*60;
+    if(j.routes&&j.routes[0]&&j.routes[0].distance) return (j.routes[0].distance/1000)/3.5*60;
   }catch(e){}
-  return havKm(aLat,aLon,bLat,bLon)*1.3/4.0*60;
+  return havKm(aLat,aLon,bLat,bLon)*1.3/3.5*60;
 }
 
 /* ===== weather (Open-Meteo) ===== */
