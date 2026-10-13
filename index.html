@@ -161,7 +161,13 @@ button{font:inherit;}
 
   <section class="tier" id="tier-route">
     <h2 id="h-route">Your route</h2>
-    <div class="seg" id="dest-toggle"><button class="seg-btn sel" data-dest="0"></button><button class="seg-btn" data-dest="1"></button><button class="seg-btn" data-dest="2"></button></div>
+    <div class="seg" id="dest-toggle"><button class="seg-btn sel" data-dest="0"></button><button class="seg-btn" data-dest="1"></button><button class="seg-btn" data-dest="2">\uD83D\uDD0D</button></div>
+    <div id="search-bar" style="display:none; margin-top:10px">
+      <div class="pick-wrap">
+        <input class="f-input" id="dest-search" placeholder="Search destination..." autocomplete="off">
+        <div class="pick-list" id="dest-search-ac"></div>
+      </div>
+    </div>
     <div id="legs" style="margin-top:4px"></div>
   </section>
 
@@ -212,9 +218,9 @@ const WMO_ICON = {0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"�
 const DEFAULTS = {
   home:{label:"", lat:null, lon:null},
   dests:[
-    {name:"", label:"", lat:null, lon:null},
-    {name:"", label:"", lat:null, lon:null},
-    {name:"", label:"", lat:null, lon:null}
+    {name:"", label:"", lat:null, lon:null, legs:[]},
+    {name:"", label:"", lat:null, lon:null, legs:[]},
+    {name:"Search", label:"", lat:null, lon:null}
   ],
   destIndex:0,
   lang:"en"
@@ -234,7 +240,7 @@ function wmoText(code){
 const I18N={
 en:{
 settings_title:"Roam settings",done:"Done",language:"Language",
-home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one leg.",
 leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
 save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
@@ -798,6 +804,12 @@ function autoLegs(){
 }
 
 function getLegs(){
+  if(S.destIndex<2){
+    const d=S.dests[S.destIndex]||{};
+    const manual=(d.legs||[]).filter(l=>l&&l.line&&l.from&&l.to)
+      .map(l=>({line:l.line, from:l.from, to:l.to, kind:"ride"}));
+    if(manual.length) return manual;
+  }
   const auto=autoLegs();
   return auto||[];
 }
@@ -1380,6 +1392,7 @@ async function loadAll(){
   loading=true;
   showErr("");
   updateDestToggle();
+  syncSearchBar();
   try{
     const o=originInfo();
     // Weather loads in parallel — never blocks train data
@@ -1572,15 +1585,61 @@ function renderDestEditors(){
   for(let i=0;i<3;i++){
     const d=S.dests[i]||{name:"",label:""};
     const box=document.createElement("div");
-    box.style.marginTop="10px";
+    box.style.marginTop="14px";
+    box.style.paddingTop="10px";
+    if(i>0) box.style.borderTop="1px solid rgba(0,0,0,.08)";
+    if(i===2){
+      box.innerHTML='<div class="f-label" style="margin-bottom:4px">\uD83D\uDD0D '+esc(t("search_mode"))+'</div>'+
+        '<div class="small">'+esc(t("search_mode_hint"))+'</div>';
+      wrap.appendChild(box);
+      continue;
+    }
     box.innerHTML=
       '<div class="f-label" style="margin-bottom:4px">'+esc(t("dest_n",{n:i+1}))+'</div>'+
       '<input class="f-input" id="set-dest-name-'+i+'" placeholder="'+esc(t("dest_name_ph"))+'" value="'+esc(d.name||"")+'" autocomplete="off" style="margin-bottom:6px">'+
       '<div class="pick-wrap"><input class="f-input" id="set-dest-'+i+'" placeholder="'+esc(t("dest_ph"))+'" value="'+esc(d.label||"")+'" autocomplete="off">'+
-      '<div class="pick-list" id="dest-ac-'+i+'"></div></div>';
+      '<div class="pick-list" id="dest-ac-'+i+'"></div></div>'+
+      '<div class="f-label" style="margin-top:8px"><span>'+esc(t("route_legs"))+'</span> <span class="f-hint">'+esc(t("legs_hint"))+'</span></div>'+
+      '<div id="leg-list-'+i+'"></div>'+
+      '<button class="btn block" id="add-leg-'+i+'" type="button">'+esc(t("add_leg"))+'</button>';
     wrap.appendChild(box);
     attachAddrAC("set-dest-"+i,"dest-ac-"+i);
+    renderLegList(i);
+    (function(idx){
+      $("add-leg-"+idx).onclick=()=>{
+        const dd=S.dests[idx];
+        if(!Array.isArray(dd.legs)) dd.legs=[];
+        if(dd.legs.length>=4){ showErr(t("max_legs")); return; }
+        dd.legs.push({line:"", from:"", to:""});
+        saveSettings(); renderLegList(idx);
+      };
+    })(i);
   }
+}
+function renderLegList(di){
+  const wrap=$("leg-list-"+di);
+  if(!wrap) return;
+  wrap.innerHTML="";
+  const d=S.dests[di]||{};
+  (d.legs||[]).forEach((leg,idx)=>{
+    const div=document.createElement("div");
+    const head=document.createElement("div");
+    head.className="row"; head.style.marginTop="8px";
+    head.innerHTML='<div class="f-label" style="margin:0">'+esc(t("leg_n",{n:idx+1}))+'</div>';
+    const del=document.createElement("button");
+    del.className="chip"; del.textContent=t("remove");
+    del.onclick=()=>{ d.legs.splice(idx,1); saveSettings(); renderLegList(di); };
+    head.appendChild(del);
+    div.appendChild(head);
+    const fl=document.createElement("div"); fl.className="f-label"; fl.textContent=t("board");
+    const fp=document.createElement("div"); fp.className="picker";
+    const tl=document.createElement("div"); tl.className="f-label"; tl.textContent=t("get_off");
+    const tp=document.createElement("div"); tp.className="picker";
+    div.appendChild(fl); div.appendChild(fp); div.appendChild(tl); div.appendChild(tp);
+    wrap.appendChild(div);
+    makePicker(fp, leg, "from", true);
+    makePicker(tp, leg, "to", false);
+  });
 }
 function applyI18n(){
   document.title="Roam";
@@ -1600,8 +1659,11 @@ function applyI18n(){
 function updateDestToggle(){
   document.querySelectorAll("#dest-toggle .seg-btn").forEach(x=>{
     const i=+x.dataset.dest;
-    const d=(S.dests&&S.dests[i])||{};
-    x.textContent=d.name||t("dest_n",{n:i+1});
+    if(i===2){ x.textContent="\uD83D\uDD0D"; }
+    else{
+      const d=(S.dests&&S.dests[i])||{};
+      x.textContent=d.name||t("dest_n",{n:i+1});
+    }
     x.classList.toggle("sel", i===S.destIndex);
   });
 }
@@ -1648,7 +1710,8 @@ function initSettings(){
           if(ai.dataset.lat&&ai.dataset.lon){ lat=+ai.dataset.lat; lon=+ai.dataset.lon; }
           else{ const g=await geocode(al); if(g){ lat=g.lat; lon=g.lon; } }
         }else if(!al){ lat=null; lon=null; }
-        S.dests[i]={name:nm, label:label, lat:lat, lon:lon};
+        const prevLegs=(S.dests[i]&&S.dests[i].legs)||[];
+        S.dests[i]={name:(i===2?"Search":nm), label:label, lat:lat, lon:lon, legs:prevLegs};
       }
       saveSettings();
       updateDestToggle();
@@ -1671,12 +1734,60 @@ document.querySelectorAll("#dest-toggle .seg-btn").forEach(b=>{
       unlockTripSilent();
       saveSettings();
       updateDestToggle();
+      syncSearchBar();
       loadAll();
     }
   };
 });
+function syncSearchBar(){
+  const sb=$("search-bar");
+  if(S.destIndex===2){
+    sb.style.display="block";
+    const d=S.dests[2]||{};
+    if(d.label) $("dest-search").value=d.label;
+  }else{
+    sb.style.display="none";
+  }
+}
+function initDestSearch(){
+  const inp=$("dest-search"), list=$("dest-search-ac");
+  let t=null, lastQ="";
+  // reuse address autocomplete, but on select: save as dest 2 and reload
+  inp.addEventListener("input",()=>{
+    clearTimeout(t);
+    const q=inp.value.trim();
+    if(q.length<3){list.innerHTML="";return;}
+    t=setTimeout(async()=>{
+      if(q===lastQ) return; lastQ=q;
+      try{
+        const url="https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=us&viewbox=-74.35,40.45,-73.65,40.95&q="+encodeURIComponent(q);
+        const r=await fetch(url,{headers:{"Accept":"application/json"}});
+        const arr=await r.json();
+        list.innerHTML="";
+        arr.forEach(a=>{
+          const dv=document.createElement("div"); dv.className="pick-item";
+          const f=fmtAddr(a);
+          dv.innerHTML="<div><b>"+esc(f.line1)+"</b>"+(f.line2?"<br><span class=pick-line>"+esc(f.line2)+"</span>":"")+"</div>";
+          dv.onclick=()=>{
+            tap();
+            S.dests[2]={name:f.line1, label:f.full, lat:+a.lat, lon:+a.lon, legs:[]};
+            inp.value=f.full;
+            list.innerHTML="";
+            saveSettings();
+            unlockTripSilent();
+            loadAll();
+          };
+          list.appendChild(dv);
+        });
+      }catch(e){}
+    },450);
+  });
+  document.addEventListener("click",e=>{ if(!list.contains(e.target)&&e.target!==inp) list.innerHTML=""; });
+}
 initSettings();
 updateDestToggle();
+initDestSearch();
+syncSearchBar();
 loadAll();
 
 </script>
