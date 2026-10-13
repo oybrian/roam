@@ -147,7 +147,7 @@ button{font:inherit;}
 <body>
 <div id="app">
   <div class="topbar">
-    <div class="app-title">StandClear</div>
+    <div class="app-title">Roam</div>
     <button class="icon-btn" id="refresh-btn" aria-label="Refresh">&#10227;</button>
     <button class="icon-btn" id="settings-btn" aria-label="Settings">&#9776;</button>
   </div>
@@ -162,6 +162,7 @@ button{font:inherit;}
   <section class="tier" id="tier-route">
     <h2 id="h-route">Your route</h2>
     <div class="seg" id="dest-toggle"><button class="seg-btn sel" data-dest="0"></button><button class="seg-btn" data-dest="1"></button><button class="seg-btn" data-dest="2">\uD83D\uDD0D</button></div>
+    <div class="seg" id="dir-toggle2" style="margin-top:8px"><button class="seg-btn sel" data-dir="outbound">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
     <div id="search-bar" style="display:none; margin-top:10px">
       <div class="pick-wrap">
         <input class="f-input" id="dest-search" placeholder="Search destination..." autocomplete="off">
@@ -223,6 +224,7 @@ const DEFAULTS = {
     {name:"Search", label:"", lat:null, lon:null}
   ],
   destIndex:0,
+  dir:"outbound",
   lang:"en"
 };
 
@@ -240,7 +242,7 @@ function wmoText(code){
 const I18N={
 en:{
 settings_title:"Roam settings",done:"Done",language:"Language",
-home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",walk_time:"Walk time (minutes)",walk_auto:"Auto",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",walk_time:"Walk time (minutes)",walk_auto:"Auto",dest_place:"destination",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one leg.",
 leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
 save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
@@ -727,7 +729,7 @@ XFER_PAIRS.forEach(xp=>{
 });
 
 function autoLegs(){
-  const h=S.home, w=(S.dests&&S.dests[S.destIndex])||{};
+  const h=originInfo(), w=destInfo();
   if(h.lat==null||h.lon==null||w.lat==null||w.lon==null) return null;
   if(havKm(h.lat,h.lon,w.lat,w.lon)<0.5) return null;
   const nearH=STATIONS.map(s=>({s:s, d:havKm(h.lat,h.lon,s.lat,s.lon)}))
@@ -808,16 +810,22 @@ function getLegs(){
     const d=S.dests[S.destIndex]||{};
     const manual=(d.legs||[]).filter(l=>l&&l.line&&l.from&&l.to)
       .map(l=>({line:l.line, from:l.from, to:l.to, kind:"ride"}));
-    if(manual.length) return manual;
+    if(manual.length){
+      if(S.dir==="inbound") return manual.slice().reverse().map(l=>({line:l.line, from:l.to, to:l.from, kind:"ride"}));
+      return manual;
+    }
   }
   const auto=autoLegs();
   return auto||[];
 }
 function originInfo(){
-  return S.home;
+  return S.dir==="inbound" ? destInfoRaw() : S.home;
+}
+function destInfoRaw(){
+  return (S.dests&&S.dests[S.destIndex])||{};
 }
 function destInfo(){
-  return (S.dests&&S.dests[S.destIndex])||{};
+  return S.dir==="inbound" ? S.home : destInfoRaw();
 }
 
 const feedCache={};
@@ -1117,7 +1125,7 @@ function lockTrip(legResults, walkMin, arrWalkMin){
   lockedPlan={
     legResults:JSON.parse(JSON.stringify(legResults)),
     walkMin:walkMin, arrWalkMin:arrWalkMin,
-    departedAt:Date.now(), destIndex:S.destIndex
+    departedAt:Date.now(), destIndex:S.destIndex, dir:S.dir
   };
   try{ localStorage.setItem("roam_lock", JSON.stringify(lockedPlan)); }catch(e){}
   renderRoute(lockedPlan.legResults, walkMin, arrWalkMin, true);
@@ -1137,7 +1145,7 @@ function restoreLock(){
     const raw=localStorage.getItem("roam_lock");
     if(!raw) return;
     const lp=JSON.parse(raw);
-    if(Date.now()-lp.departedAt<3*3600*1000 && lp.destIndex===S.destIndex){
+    if(Date.now()-lp.departedAt<3*3600*1000 && lp.destIndex===S.destIndex && lp.dir===S.dir){
       lockedPlan=lp;
     }else{
       localStorage.removeItem("roam_lock");
@@ -1203,7 +1211,7 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked){
   if(lastTrip&&lastTrip.at&&arrWalkMin!=null){
     const av=document.createElement("div");
     av.className="leave-line";
-    av.innerHTML="🏢"+" Arrive by <b>"+fmtClock(lastTrip.at+arrWalkMin*60)+"</b>";
+    av.innerHTML=(S.dir==="inbound"?"🏠":"🏢")+" Arrive by <b>"+fmtClock(lastTrip.at+arrWalkMin*60)+"</b>";
     box.appendChild(av);
   }
 }
@@ -1212,7 +1220,7 @@ function selectDepartOption(i, walkMin, arrWalkMin){
   departIdx=i;
   try{
     sessionStorage.setItem("roam_depart", JSON.stringify({
-      destIndex:S.destIndex, trainBt:departOptionsCache[i].trainBt
+      destIndex:S.destIndex, dir:S.dir, trainBt:departOptionsCache[i].trainBt
     }));
   }catch(e){}
   const opt=departOptionsCache[i];
@@ -1309,7 +1317,7 @@ async function renderAltDetail(opt){
   const w=document.createElement("div");
   w.className="leg-sub";
   w.style.margin="8px 0";
-  w.textContent=t("walk_to",{min:opt.walkMin,place:t("home"),station:esc(st?st.name:"")});
+  w.textContent=t("walk_to",{min:opt.walkMin,place:(S.dir==="inbound"?t("dest_place"):t("home")),station:esc(st?st.name:"")});
   box.appendChild(w);
 
   // recompute fresh so the detail is never stale
@@ -1392,6 +1400,7 @@ async function loadAll(){
   loading=true;
   showErr("");
   updateDestToggle();
+  syncDirToggle();
   syncSearchBar();
   try{
     const o=originInfo();
@@ -1417,7 +1426,7 @@ async function loadAll(){
         let legResults=await computeRoute(legs);
         let walkMin=null;
         const dCur=S.dests[S.destIndex]||{};
-        if(dCur.walkMin!=null) walkMin=dCur.walkMin;
+        if(S.dir==="outbound"&&dCur.walkMin!=null) walkMin=dCur.walkMin;
         if(walkMin==null){
           try{
             const bs=ST_BY_ID[legResults[0].leg.from];
@@ -1446,7 +1455,16 @@ async function loadAll(){
             const at=lr[0]&&lr[0].trip;
             if(at&&!departOptionsCache.some(o=>Math.abs(o.trainBt-at.bt)<60)){
               const lastTrip=lr[lr.length-1]&&lr[lr.length-1].trip;
-              const arriveDest=(lastTrip&&lastTrip.at&&arrWalkMin!=null)?lastTrip.at+arrWalkMin*60:null;
+              let arriveDest=(lastTrip&&lastTrip.at&&arrWalkMin!=null)?lastTrip.at+arrWalkMin*60:null;
+              if(arriveDest==null){
+                // Fallback: estimate from main route's travel duration
+                const mainLast=legResults[legResults.length-1]&&legResults[legResults.length-1].trip;
+                const mainFirst=legResults[0]&&legResults[0].trip;
+                if(mainLast&&mainLast.at&&mainFirst&&mainFirst.bt&&arrWalkMin!=null){
+                  const mainDur=(mainLast.at+arrWalkMin*60)-(mainFirst.bt-walkMin*60);
+                  if(mainDur>0) arriveDest=(at.bt-walkMin*60)+mainDur;
+                }
+              }
               departOptionsCache.push({leaveBy:at.bt-walkMin*60, trainBt:at.bt, arriveDest:arriveDest, legResults:lr});
             }
           }
@@ -1454,7 +1472,7 @@ async function loadAll(){
             // Restore session selection by train time (robust to list shifts)
             try{
               const saved=JSON.parse(sessionStorage.getItem("roam_depart")||"null");
-              if(saved&&saved.destIndex===S.destIndex){
+              if(saved&&saved.destIndex===S.destIndex&&saved.dir===S.dir){
                 const fi=departOptionsCache.findIndex(o=>Math.abs(o.trainBt-saved.trainBt)<90);
                 if(fi>=0) departIdx=fi;
               }
@@ -1736,6 +1754,18 @@ function initSettings(){
 /* ===== init ===== */
 restoreLock();
 setInterval(()=>{ if(!document.hidden) loadAll(); }, 30000);
+document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(b=>{
+  b.onclick=()=>{
+    tap();
+    if(S.dir!==b.dataset.dir){
+      S.dir=b.dataset.dir;
+      unlockTripSilent();
+      saveSettings();
+      syncDirToggle();
+      loadAll();
+    }
+  };
+});
 document.querySelectorAll("#dest-toggle .seg-btn").forEach(b=>{
   b.onclick=()=>{
     tap();
@@ -1750,6 +1780,11 @@ document.querySelectorAll("#dest-toggle .seg-btn").forEach(b=>{
     }
   };
 });
+function syncDirToggle(){
+  document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(x=>{
+    x.classList.toggle("sel", x.dataset.dir===S.dir);
+  });
+}
 function syncSearchBar(){
   const sb=$("search-bar");
   if(S.destIndex===2){
@@ -1797,6 +1832,7 @@ function initDestSearch(){
 }
 initSettings();
 updateDestToggle();
+syncDirToggle();
 initDestSearch();
 syncSearchBar();
 loadAll();
