@@ -170,7 +170,11 @@ button{font:inherit;}
     <div id="route-controls" style="display:flex; flex-direction:column; gap:12px; margin-bottom:12px">
     <div class="seg" id="dest-toggle" style="margin-bottom:0"></div>
     <div class="seg" id="dir-toggle2" style="display:none"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
-    <button id="take-me-home-btn" class="btn" style="width:100%; margin-bottom:0">🏠 Take me home</button>
+    <div style="display:flex; gap:8px; width:100%; margin-bottom:0">
+      <button id="take-me-home-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me home">🏠</button>
+      <button id="take-me-dest-0-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 1">🔵</button>
+      <button id="take-me-dest-1-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 2">🟢</button>
+    </div>
     <div id="search-bar" style="display:none">
       <div class="pick-wrap">
         <input class="f-input" id="dest-search" placeholder="Search destination..." autocomplete="off" style="padding-right:40px; background:#f2f2f7">
@@ -460,6 +464,7 @@ fr:{0:"Dégagé",1:"Plutôt dégagé",2:"Partiellement nuageux",3:"Couvert",45:"
 const LS_KEY = "roam_v1";
 let S = loadSettings();
 let gpsOrigin=null; // {lat, lon} when "Take me home" is active
+let gpsToDest=null; // dest index when GPS->destination mode is active
 let gpsMatchedIdx=null; // index into S.dests matched by GPS proximity
 function loadSettings(){
   try{
@@ -848,7 +853,7 @@ function getLegs(){
   return auto||[];
 }
 function originInfo(){
-  if(gpsOrigin&&S.dir==="inbound") return gpsOrigin;
+  if(gpsOrigin&&(S.dir==="inbound"||gpsToDest!=null)) return gpsOrigin;
   return S.dir==="inbound" ? destInfoRaw() : S.home;
 }
 function destInfoRaw(){
@@ -856,6 +861,7 @@ function destInfoRaw(){
   return (S.dests&&S.dests[S.destIndex])||{};
 }
 function destInfo(){
+  if(gpsToDest!=null) return (S.dests&&S.dests[gpsToDest])||{};
   return S.dir==="inbound" ? S.home : destInfoRaw();
 }
 
@@ -1322,7 +1328,7 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked, arriveDestEst){
   if(arriveBy!=null){
     const av=document.createElement("div");
     av.className="leave-line";
-    av.innerHTML=(S.dir==="inbound"?"🏠":"🏢")+" Arrive by <b>"+fmtClock(arriveBy)+"</b>";
+    av.innerHTML=(((gpsToDest==null)&&(S.dir==="inbound"||gpsOrigin))?"🏠":"🏢")+" Arrive by <b>"+fmtClock(arriveBy)+"</b>";
     box.appendChild(av);
   }
 }
@@ -1468,7 +1474,7 @@ async function renderAltDetail(opt){
       if(destWalkMin!=null){
         const av=document.createElement("div");
         av.className="leave-line";
-        av.innerHTML=(S.dir==="inbound"?"\uD83C\uDFE0":"\uD83C\uDFE2")+" Arrive by <b>"+fmtClock(lastTrip.at+destWalkMin*60)+"</b>";
+        av.innerHTML=(((gpsToDest==null)&&(S.dir==="inbound"||gpsOrigin))?"\uD83C\uDFE0":"\uD83C\uDFE2")+" Arrive by <b>"+fmtClock(lastTrip.at+destWalkMin*60)+"</b>";
         box.appendChild(av);
       }
     }
@@ -2015,7 +2021,7 @@ function takeMeHome(){
     return;
   }
   const btn=$("take-me-home-btn");
-  if(btn){ btn.disabled=true; btn.textContent="🏠 ..."; }
+  if(btn){ btn.disabled=true; }
   navigator.geolocation.getCurrentPosition(
     (pos)=>{
       const glat=pos.coords.latitude, glon=pos.coords.longitude;
@@ -2033,7 +2039,7 @@ function takeMeHome(){
       S.dir="inbound";
       S.searchActive=false;
       viewingAlt=null;
-      if(btn){ btn.disabled=false; btn.textContent="🏠 "+t("take_me_home"); }
+      if(btn){ btn.disabled=false; }
       saveSettings();
       loadAll();
     },
@@ -2045,7 +2051,42 @@ function takeMeHome(){
   );
 }
 function clearGpsOrigin(){
-  gpsOrigin=null; gpsMatchedIdx=null;
+  gpsOrigin=null; gpsMatchedIdx=null; gpsToDest=null;
+}
+// Take me to a saved destination from current GPS location
+function takeMeToDest(idx){
+  tap();
+  if(!navigator.geolocation){
+    showErr(t("gps_unavailable"));
+    return;
+  }
+  const d=(S.dests&&S.dests[idx])||{};
+  if(d.lat==null||d.lon==null){
+    showErr("Set the destination address first (tap \u2261)");
+    return;
+  }
+  const btn=$("take-me-dest-"+idx+"-btn");
+  if(btn){ btn.disabled=true; }
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{
+      const glat=pos.coords.latitude, glon=pos.coords.longitude;
+      gpsOrigin={lat:glat, lon:glon, name:t("current_location")};
+      gpsToDest=idx;
+      gpsMatchedIdx=null;
+      S.destIndex=idx;
+      S.dir="outbound";
+      S.searchActive=false;
+      viewingAlt=null;
+      if(btn){ btn.disabled=false; }
+      saveSettings();
+      loadAll();
+    },
+    (err)=>{
+      if(btn){ btn.disabled=false; }
+      showErr(t("gps_denied"));
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:60000}
+  );
 }
 function syncDirToggle(){
   document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(x=>{
@@ -2116,8 +2157,15 @@ syncSearchBar();
 (function(){
   const thb=$("take-me-home-btn");
   if(thb){
-    try{ thb.textContent="🏠 "+t("take_me_home"); }catch(e){ thb.textContent="🏠 Take me home"; }
     thb.onclick=()=>{ tap(); takeMeHome(); };
+  }
+  const d0b=$("take-me-dest-0-btn");
+  if(d0b){
+    d0b.onclick=()=>{ tap(); takeMeToDest(0); };
+  }
+  const d1b=$("take-me-dest-1-btn");
+  if(d1b){
+    d1b.onclick=()=>{ tap(); takeMeToDest(1); };
   }
 })();
 loadAll();
