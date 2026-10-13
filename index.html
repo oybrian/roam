@@ -171,9 +171,9 @@ button{font:inherit;}
     <div class="seg" id="dest-toggle" style="margin-bottom:0"></div>
     <div class="seg" id="dir-toggle2" style="display:none"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
     <div style="display:flex; gap:8px; width:100%; margin-bottom:0">
-      <button id="take-me-home-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me home">🏠</button>
-      <button id="take-me-dest-0-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 1">1️⃣</button>
-      <button id="take-me-dest-1-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 2">2️⃣</button>
+      <button id="take-me-home-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me home"></button>
+      <button id="take-me-dest-0-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 1"></button>
+      <button id="take-me-dest-1-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 2"></button>
     </div>
     <div id="search-bar" style="display:none">
       <div class="pick-wrap">
@@ -1989,6 +1989,7 @@ function initSettings(){
       }
       saveSettings();
       updateDestToggle();
+      try{ syncGpsButtons(); }catch(e){}
       $("sheet").classList.remove("open");
       loadAll();
     }catch(e){ showErr(t("err_save")+String(e.message||e).slice(0,80)); }
@@ -2154,6 +2155,20 @@ updateDestToggle();
 syncDirToggle();
 initDestSearch();
 syncSearchBar();
+function syncGpsButtons(){
+  const thb=$("take-me-home-btn");
+  if(thb) thb.innerHTML="🏠<br><span style='font-size:11px'>Home</span>";
+  const d0b=$("take-me-dest-0-btn");
+  if(d0b){
+    const nm=((S.dests&&S.dests[0]&&S.dests[0].name)||"").trim()||"Destination 1";
+    d0b.innerHTML="📍<br><span style='font-size:11px'>"+esc(nm)+"</span>";
+  }
+  const d1b=$("take-me-dest-1-btn");
+  if(d1b){
+    const nm=((S.dests&&S.dests[1]&&S.dests[1].name)||"").trim()||"Destination 2";
+    d1b.innerHTML="📍<br><span style='font-size:11px'>"+esc(nm)+"</span>";
+  }
+}
 (function(){
   const thb=$("take-me-home-btn");
   if(thb){
@@ -2167,6 +2182,7 @@ syncSearchBar();
   if(d1b){
     d1b.onclick=()=>{ tap(); takeMeToDest(1); };
   }
+  syncGpsButtons();
 })();
 loadAll();
 
