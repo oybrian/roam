@@ -164,6 +164,7 @@ button{font:inherit;}
     <h2 id="h-route">Your route</h2>
     <div class="seg" id="dest-toggle"></div>
     <div class="seg" id="dir-toggle2" style="margin-top:8px"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
+    <button id="take-me-home-btn" class="btn" style="margin-top:8px; width:100%;">📍 Take me home</button>
     <div id="search-bar" style="display:none; margin-top:10px">
       <div class="pick-wrap">
         <input class="f-input" id="dest-search" placeholder="Search destination..." autocomplete="off">
@@ -247,7 +248,7 @@ route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one l
 leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
 save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
 max_legs:"Maximum 4 legs.",station_ph:"Type station name…",
-to_work:"To Work",to_home:"To Home",to_prefix:"To ",to_dest:"Dest",clothing_hot:"Tank top, shorts",clothing_warm:"T-shirt",clothing_mild:"Shirt",clothing_cool:"Light jacket",clothing_chilly:"Jacket",clothing_cold:"Coat, scarf",clothing_vcold:"Heavy coat, scarf",clothing_freezing:"Padded coat, scarf, gloves",your_route:"Your route",alternatives:"Alternatives",
+to_work:"To Work",to_home:"To Home",take_me_home:"Take me home",current_location:"Current location",gps_unavailable:"Location not available",gps_denied:"Location permission denied",to_prefix:"To ",to_dest:"Dest",clothing_hot:"Tank top, shorts",clothing_warm:"T-shirt",clothing_mild:"Shirt",clothing_cool:"Light jacket",clothing_chilly:"Jacket",clothing_cold:"Coat, scarf",clothing_vcold:"Heavy coat, scarf",clothing_freezing:"Padded coat, scarf, gloves",your_route:"Your route",alternatives:"Alternatives",
 wind:"Wind",rain:"Rain",home:"home",work:"work",
 walk_to:"Walk ~{min} min from {place} to {station}",
 add_addr:"Add your {place} address in Settings for walk time.",
@@ -279,7 +280,7 @@ route_legs:"경로 구간",legs_hint:"타는 열차마다 하나씩 — 환승 �
 leg_n:"구간 {n}",board:"탑승",get_off:"하차",remove:"× 삭제",add_leg:"+ 구간 추가",
 save:"저장",saving:"저장 중…",addr_note:"주소는 한 번만 변환되어 이 기기에만 저장됩니다.",walk_time:"도보 시간 (분)",walk_hint:"첫 역까지 걸리는 시간. 비워두면 자동 계산됩니다.",walk_auto:"자동",walk_from_home:"집 → 지하철역",walk_from_work:"회사 → 지하철역",tt_prev:"이전 열차",planned_work:"예정된 공사",tomorrow:"내일",today:"오늘",
 max_legs:"최대 4개 구간.",station_ph:"역 이름 입력…",
-to_work:"출근",to_home:"퇴근",your_route:"내 경로",alternatives:"대체 경로",
+to_work:"출근",to_home:"퇴근",take_me_home:"집으로",current_location:"현재 위치",gps_unavailable:"위치를 사용할 수 없음",gps_denied:"위치 권한이 거부됨",your_route:"내 경로",alternatives:"대체 경로",
 wind:"바람",rain:"강수",home:"집",work:"직장",
 walk_to:"{place}에서 {station}까지 도보 약 {min}분",
 add_addr:"도보 시간을 보려면 설정에서 {place} 주소를 입력하세요.",
@@ -311,7 +312,7 @@ route_legs:"路线段",legs_hint:"每乘一趟车一段 — 不换乘？只用�
 leg_n:"第 {n} 段",board:"上车",get_off:"下车",remove:"× 删除",add_leg:"+ 添加路段",
 save:"保存",saving:"保存中…",addr_note:"地址仅转换一次，只保存在此设备上。",walk_time:"步行时间（分钟）",walk_hint:"步行到第一站的时间。留空则自动计算。",walk_auto:"自动",walk_from_home:"家 → 地铁站",walk_from_work:"公司 → 地铁站",tt_prev:"上一班",planned_work:"计划施工",tomorrow:"明天",today:"今天",
 max_legs:"最多 4 段。",station_ph:"输入车站名称…",
-to_work:"上班",to_home:"下班",your_route:"我的路线",alternatives:"备选路线",
+to_work:"上班",to_home:"下班",take_me_home:"回家",current_location:"当前位置",gps_unavailable:"无法获取位置",gps_denied:"位置权限被拒绝",your_route:"我的路线",alternatives:"备选路线",
 wind:"风",rain:"降水",home:"家",work:"公司",
 walk_to:"从{place}步行约 {min} 分钟到{station}",
 add_addr:"请在设置中输入{place}地址以显示步行时间。",
@@ -343,7 +344,7 @@ route_legs:"経路区間",legs_hint:"乗る電車ごとに1区間 — 乗換な�
 leg_n:"区間 {n}",board:"乗車",get_off:"下車",remove:"× 削除",add_leg:"+ 区間を追加",
 save:"保存",saving:"保存中…",addr_note:"住所は一度だけ変換され、このデバイスにのみ保存されます。",walk_time:"徒歩時間（分）",walk_hint:"最初の駅までの徒歩時間。空欄で自動計算。",walk_auto:"自動",walk_from_home:"自宅 → 駅",walk_from_work:"職場 → 駅",tt_prev:"前の列車",planned_work:"工事予定",tomorrow:"明日",today:"今日",
 max_legs:"最大4区間。",station_ph:"駅名を入力…",
-to_work:"出勤",to_home:"帰宅",your_route:"マイルート",alternatives:"代替ルート",
+to_work:"出勤",to_home:"帰宅",take_me_home:"家に帰る",current_location:"現在地",gps_unavailable:"位置情報を取得できません",gps_denied:"位置情報の許可が拒否されました",your_route:"マイルート",alternatives:"代替ルート",
 wind:"風",rain:"降水",home:"自宅",work:"職場",
 walk_to:"{place}から{station}まで徒歩約{min}分",
 add_addr:"徒歩時間を表示するには設定で{place}の住所を入力してください。",
@@ -375,7 +376,7 @@ route_legs:"Tramos de ruta",legs_hint:"Uno por tren — ¿sin transbordo? Usa so
 leg_n:"Tramo {n}",board:"Subir",get_off:"Bajar",remove:"× Eliminar",add_leg:"+ Añadir tramo",
 save:"Guardar",saving:"Guardando…",addr_note:"Las direcciones se geocodifican una vez y se guardan solo en este dispositivo.",walk_time:"Tiempo a pie (min)",walk_hint:"Cuánto tardas a pie hasta la primera estación. Déjalo en blanco para cálculo automático.",walk_auto:"Auto",walk_from_home:"Casa → estación",walk_from_work:"Trabajo → estación",tt_prev:"Anterior",planned_work:"Obra planificada",tomorrow:"Mañana",today:"Hoy",
 max_legs:"Máximo 4 tramos.",station_ph:"Escribe el nombre de la estación…",
-to_work:"Al trabajo",to_home:"A casa",your_route:"Tu ruta",alternatives:"Alternativas",
+to_work:"Al trabajo",to_home:"A casa",take_me_home:"Ir a casa",current_location:"Ubicación actual",gps_unavailable:"Ubicación no disponible",gps_denied:"Permiso de ubicación denegado",your_route:"Tu ruta",alternatives:"Alternativas",
 wind:"Viento",rain:"Lluvia",home:"casa",work:"trabajo",
 walk_to:"Camina ~{min} min desde {place} hasta {station}",
 add_addr:"Añade tu dirección de {place} en Ajustes para ver el tiempo a pie.",
@@ -407,7 +408,7 @@ route_legs:"Segments du trajet",legs_hint:"Un par train — sans correspondance 
 leg_n:"Segment {n}",board:"Embarquement",get_off:"Descente",remove:"× Supprimer",add_leg:"+ Ajouter un segment",
 save:"Enregistrer",saving:"Enregistrement…",addr_note:"Les adresses sont géocodées une fois et stockées uniquement sur cet appareil.",walk_time:"Temps de marche (min)",walk_hint:"Temps de marche jusqu'à la première station. Laisser vide pour calcul auto.",walk_auto:"Auto",walk_from_home:"Domicile → station",walk_from_work:"Travail → station",tt_prev:"Précédent",planned_work:"Travaux prévus",tomorrow:"Demain",today:"Aujourd'hui",
 max_legs:"4 segments maximum.",station_ph:"Nom de la station…",
-to_work:"Aller au travail",to_home:"Rentrer",your_route:"Votre trajet",alternatives:"Alternatives",
+to_work:"Aller au travail",to_home:"Rentrer",take_me_home:"Rentrer à la maison",current_location:"Position actuelle",gps_unavailable:"Position non disponible",gps_denied:"Permission de localisation refusée",your_route:"Votre trajet",alternatives:"Alternatives",
 wind:"Vent",rain:"Pluie",home:"domicile",work:"travail",
 walk_to:"~{min} min à pied depuis {place} jusqu'à {station}",
 add_addr:"Ajoutez votre adresse ({place}) dans Réglages pour le temps de marche.",
@@ -450,6 +451,7 @@ fr:{0:"Dégagé",1:"Plutôt dégagé",2:"Partiellement nuageux",3:"Couvert",45:"
 /* ===== state ===== */
 const LS_KEY = "roam_v1";
 let S = loadSettings();
+let gpsOrigin=null; // {lat, lon} when "Take me home" is active
 function loadSettings(){
   try{
     const raw = localStorage.getItem(LS_KEY);
@@ -815,6 +817,10 @@ function autoLegs(){
 function isSearchMode(){ return S.destIndex>= (S.dests||[]).length; }
 function searchDest(){ return S.searchDest||{}; }
 function getLegs(){
+  if(gpsOrigin&&S.dir==="inbound"){
+    const auto=autoLegs();
+    return auto||[];
+  }
   if(!isSearchMode()){
     const d=S.dests[S.destIndex]||{};
     const manual=(d.legs||[]).filter(l=>l&&l.from&&l.to)
@@ -828,6 +834,7 @@ function getLegs(){
   return auto||[];
 }
 function originInfo(){
+  if(gpsOrigin&&S.dir==="inbound") return gpsOrigin;
   return S.dir==="inbound" ? destInfoRaw() : S.home;
 }
 function destInfoRaw(){
@@ -1869,6 +1876,7 @@ function updateDestToggle(){
     b.onclick=()=>{ tap();
       if(S.destIndex!==i){
         S.destIndex=i;
+        clearGpsOrigin();
         unlockTripSilent(); saveSettings();
         updateDestToggle(); syncSearchBar(); loadAll();
       }
@@ -1966,6 +1974,7 @@ document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(b=>{
     tap();
     if(S.dir!==b.dataset.dir){
       S.dir=b.dataset.dir;
+      clearGpsOrigin();
       unlockTripSilent();
       saveSettings();
       syncDirToggle();
@@ -1974,6 +1983,35 @@ document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(b=>{
   };
 });
 
+// Take me home: use GPS location as origin, find route home
+function takeMeHome(){
+  tap();
+  if(!navigator.geolocation){
+    showErr(t("gps_unavailable"));
+    return;
+  }
+  const btn=$("take-me-home-btn");
+  if(btn){ btn.disabled=true; btn.textContent="📍 ..."; }
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{
+      gpsOrigin={lat:pos.coords.latitude, lon:pos.coords.longitude, name:t("current_location")};
+      S.dir="inbound";
+      S.searchActive=false;
+      viewingAlt=null;
+      if(btn){ btn.disabled=false; btn.textContent="📍 "+t("take_me_home"); }
+      saveSettings();
+      loadAll();
+    },
+    (err)=>{
+      if(btn){ btn.disabled=false; btn.textContent="📍 "+t("take_me_home"); }
+      showErr(t("gps_denied"));
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:60000}
+  );
+}
+function clearGpsOrigin(){
+  if(gpsOrigin){ gpsOrigin=null; }
+}
 function syncDirToggle(){
   document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(x=>{
     x.classList.toggle("sel", x.dataset.dir===S.dir);
@@ -2035,6 +2073,13 @@ updateDestToggle();
 syncDirToggle();
 initDestSearch();
 syncSearchBar();
+(function(){
+  const thb=$("take-me-home-btn");
+  if(thb){
+    try{ thb.textContent="📍 "+t("take_me_home"); }catch(e){ thb.textContent="📍 Take me home"; }
+    thb.onclick=()=>{ tap(); takeMeHome(); };
+  }
+})();
 loadAll();
 
 </script>
