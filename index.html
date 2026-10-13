@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0d12">
+<title>Roam</title>
+<style>
+:root{
+  --bg:#f2f2f7; --card:#ffffff; --text:#1c1c1e; --muted:#8e8e93;
+  --green:#34c759; --amber:#ff9500; --red:#ff3b30; --blue:#007aff;
+  --seg:#e3e3e8; --press:rgba(0,0,0,.06);
+  color-scheme:light;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.45; -webkit-font-smoothing:antialiased;}
+#app{max-width:520px; margin:0 auto; padding:8px 16px 48px;}
+/* iOS large-title header */
+.topbar{display:flex; align-items:flex-end; gap:8px; margin:8px 2px 14px;}
+.app-title{font-size:32px; font-weight:800; letter-spacing:-.02em; flex:1; line-height:1.15;}
+.icon-btn{background:transparent; border:none; border-radius:50%;
+  width:40px; height:40px; font-size:21px; cursor:pointer; color:var(--blue);
+  display:flex; align-items:center; justify-content:center;}
+.icon-btn:active{background:var(--press); transform:scale(.92);}
+@keyframes spin360{to{transform:rotate(360deg);}}
+.icon-btn.spinning{animation:spin360 .7s linear infinite;}
+.mini-btn{transition:transform .1s ease, opacity .1s ease;}
+.mini-btn:active{transform:scale(.93);}
+button{ -webkit-tap-highlight-color:transparent; }
+/* iOS grouped cards */
+.tier{background:var(--card); border:none; border-radius:20px; padding:16px; margin-bottom:14px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.tier h2{font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);
+  margin:0 0 10px; font-weight:600;}
+.row{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+/* weather */
+.tier-wxstrip{padding:10px 16px;}
+.wx-strip{font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums;}
+.wx-strip .wx-icon{font-size:18px; margin-right:6px;}
+.wx-strip{cursor:pointer;}
+.wx-abadge{color:#B7791F; font-weight:600;}
+.chev-wx{color:#8E8E93; font-size:16px;}
+.wx-detail{font-size:13px; margin-top:6px;}
+.wx-alert{margin-top:8px; padding-top:8px; border-top:1px solid rgba(0,0,0,0.08);}
+.wx-ahead{margin-top:2px;}
+.wx-adesc{color:var(--muted); margin-top:4px; white-space:pre-wrap; line-height:1.4;}
+.wx-strip b{font-weight:700;}
+.leave-line{font-size:16px; font-weight:600; margin:10px 0 4px; font-variant-numeric:tabular-nums;}
+.mini-btn{background:#007AFF; color:#fff; border:none; border-radius:12px; padding:4px 12px; font-size:13px; font-weight:600; margin-left:8px; cursor:pointer;}
+.mini-btn:active{opacity:0.7;}
+
+/* iOS segmented control */
+.seg{display:flex; background:var(--seg); border-radius:12px; padding:2px; margin-bottom:12px;}
+.seg-btn{flex:1; border:none; background:transparent; border-radius:10px; padding:6px 0;
+  font-size:13px; font-weight:500; color:var(--text); cursor:pointer;}
+.seg-btn.sel{background:#fff; font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.12);}
+.seg-btn{transition:transform .1s ease, opacity .1s ease;}
+.seg-btn:active{transform:scale(.94); opacity:.75;}
+/* line badges */
+.badge{display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:32px;
+  border-radius:10px; font-weight:700; font-size:17px; color:#fff; padding:0 9px; margin-right:10px;
+  box-shadow:0 1px 2px rgba(0,0,0,.12);}
+.dot{width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:2px; flex:none;}
+.leg-head .dot{width:11px; height:11px; margin:0 10px 0 2px;}
+.dot.green{background:var(--green);} .dot.amber{background:var(--amber);}
+.dot.red{background:var(--red);} .dot.blue{background:var(--blue);} .dot.gray{background:#c7c7cc;}
+/* route legs */
+.leg{border:none; border-radius:16px; padding:13px 14px; margin:10px 0; background:var(--bg);
+  transition:transform .12s ease, opacity .12s ease;}
+.leg:active{transform:scale(.985); opacity:.82;}
+.leg-head .chev{transition:transform .22s ease; display:inline-block;}
+.leg-head .chev.open{transform:rotate(90deg);}
+.leg-head{display:flex; align-items:center; font-weight:700; font-size:17px; letter-spacing:-.01em;}
+.leg-sub{color:var(--muted); font-size:13px; margin-top:5px;}
+.leg-time{font-size:17px; margin-top:8px; font-variant-numeric:tabular-nums;}
+.leg-head .chev{margin-left:auto; color:#8E8E93; font-size:18px; font-weight:400;}
+.tt{margin-top:8px; padding-top:4px; border-top:1px solid rgba(0,0,0,0.08);}
+.tt-row{display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:14px; font-variant-numeric:tabular-nums;}
+.tt-prev{color:#8E8E93;}
+.tt-cur{font-weight:700;}
+.tt-tag{color:#8E8E93; font-size:13px;}
+.tt-cur .tt-tag{color:#007AFF;}
+.planned{background:#FFF9E6; border-radius:14px; padding:12px 14px; margin:10px 0;}
+.planned-head{display:flex; align-items:center; gap:6px; font-weight:700; font-size:15px;}
+.planned-item{margin-top:8px; padding-top:8px; border-top:1px solid rgba(0,0,0,0.08); cursor:pointer;}
+.planned-title{font-size:14px; margin-top:4px; line-height:1.35;}
+.planned-when{color:#8E8E93; font-size:13px; margin-top:2px;}
+.planned-desc{font-size:13px; color:#3A3A3C; margin-top:6px; line-height:1.4; display:none;}
+.leg-time b{font-size:17px; font-weight:700; letter-spacing:-.01em; font-variant-numeric:tabular-nums;}
+.transfer{background:var(--bg);}
+.alert-text{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.5;}
+button{font:inherit;}
+.btn{background:var(--seg); color:var(--text); border:none; border-radius:12px;
+  padding:10px 14px; font-weight:600; cursor:pointer;}
+.btn:active{background:#d8d8de;}
+.btn.primary{background:var(--blue); color:#fff;}
+.btn.primary:active{background:#0062cc;}
+.btn.block{width:100%; margin-top:12px;}
+.updated{color:var(--muted); font-size:12px; text-align:center; margin-top:8px;}
+.alt{border:none; border-radius:16px; padding:13px 14px; margin:10px 0; background:var(--bg); cursor:pointer;}
+.alt:active{background:#e8e8ed;}
+.alt b{font-size:15px;}
+.allclear{color:var(--green); font-weight:600;}
+/* settings sheet */
+#sheet{position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; z-index:50;
+  align-items:flex-end; justify-content:center;}
+#sheet.open{display:flex;}
+#sheet-card{background:var(--bg); width:100%; max-width:520px; max-height:92vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  border-radius:20px 20px 0 0; padding:18px 18px 34px;}
+#sheet-card h2{margin:0 0 4px; font-size:22px; font-weight:700; letter-spacing:-.02em;}
+.f-label{font-size:13px; color:var(--muted); margin:16px 0 6px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;}
+.f-hint{text-transform:none; letter-spacing:0; font-weight:400;}
+.f-input{width:100%; background:#fff; color:var(--text); border:none;
+  border-radius:12px; padding:12px 14px; font-size:16px; box-shadow:0 1px 2px rgba(0,0,0,.04);}
+.f-input:focus{outline:2px solid var(--blue); outline-offset:-2px;}
+.picker{position:relative;}
+.picker-list{position:absolute; top:100%; left:0; right:0; background:#fff; border:none;
+  border-radius:14px; margin-top:6px; max-height:250px; overflow-y:auto; z-index:60; display:none;
+  box-shadow:0 8px 30px rgba(0,0,0,.14);}
+.picker-list.open{display:block;}
+.picker-item{padding:11px 14px; border-bottom:1px solid #f2f2f7; cursor:pointer; font-size:15px;}
+.picker-item:last-child{border-bottom:none;}
+.picker-item:active{background:var(--bg);}
+.picker-item .badge{min-width:26px; height:26px; font-size:14px; margin-right:8px; border-radius:8px;}
+.pick-wrap{position:relative;}
+.pick-list{position:absolute; top:100%; left:0; right:0; background:#fff; border:none;
+  border-radius:14px; margin-top:6px; max-height:250px; overflow-y:auto; z-index:60;
+  box-shadow:0 8px 30px rgba(0,0,0,.14);}
+.pick-item{padding:11px 14px; border-bottom:1px solid #f2f2f7; cursor:pointer; font-size:15px;}
+.pick-item:last-child{border-bottom:none;}
+.pick-line{color:var(--muted); font-size:12px;}
+.linechips{margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;}
+.chip{background:#fff; border:none; color:var(--blue); border-radius:999px;
+  padding:7px 14px; font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.06);}
+.chip.sel{background:var(--blue); color:#fff;}
+.picked{font-size:13px; color:var(--muted); margin-top:4px;}
+.legedit{background:#fff; border-radius:16px; padding:4px 14px 14px; margin-top:10px;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);}
+.err{background:#fdecea; color:#b3261e; border-radius:14px; padding:12px 14px; margin-bottom:12px; font-size:14px;}
+.small{font-size:12px; color:var(--muted);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="app-title">StandClear</div>
+    <button class="icon-btn" id="refresh-btn" aria-label="Refresh">&#10227;</button>
+    <button class="icon-btn" id="settings-btn" aria-label="Settings">&#9776;</button>
+  </div>
+  <div id="err" class="err" style="display:none"></div>
+
+  <section class="tier tier-wxstrip" id="tier-weather">
+    <div class="wx-strip" id="wx-strip">&ndash;</div>
+  </section>
+
+  <div id="planned" style="display:none"></div>
+
+  <section class="tier" id="tier-route">
+    <h2 id="h-route">Your route</h2>
+    <div class="seg" id="dest-toggle"><button class="seg-btn sel" data-dest="0"></button><button class="seg-btn" data-dest="1"></button><button class="seg-btn" data-dest="2"></button></div>
+    <div id="legs" style="margin-top:4px"></div>
+  </section>
+
+  <section class="tier" id="tier-alt">
+    <h2 id="h-alt">Alternatives</h2>
+    <div id="alts"></div>
+  </section>
+
+  <div class="updated" id="updated"></div>
+</div>
+
+<div id="sheet">
+  <div id="sheet-card">
+    <div class="row">
+      <h2 id="set-title">Commute settings</h2>
+      <button class="btn" id="sheet-close">Done</button>
+    </div>
+    <div class="f-label" id="lbl-home">Home address</div>
+    <div class="pick-wrap">
+      <input class="f-input" id="set-home" placeholder="e.g. 123 Main St, Brooklyn NY 11238" autocomplete="off">
+      <div class="pick-list" id="home-ac"></div>
+    </div>
+    <div class="f-label" id="lbl-dest">Destinations</div>
+    <div class="small" id="lbl-dest-hint" style="margin-bottom:8px">Three places you go often. Routes are found automatically.</div>
+    <div id="dest-list"></div>
+    <button class="btn primary block" id="set-save">Save</button>
+    <div class="small" style="margin-top:8px" id="lbl-note">Addresses are geocoded once and stored on this device only.</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ===== embedded data (replaced at build time) ===== */
+const STATIONS = [{"i":"101","n":"Van Cortlandt Park-242 St","a":40.88925,"o":-73.89858,"l":["1"]},{"i":"103","n":"238 St","a":40.88467,"o":-73.90087,"l":["1"]},{"i":"104","n":"231 St","a":40.87886,"o":-73.90483,"l":["1"]},{"i":"106","n":"Marble Hill-225 St","a":40.87456,"o":-73.90983,"l":["1"]},{"i":"107","n":"215 St","a":40.86944,"o":-73.91528,"l":["1"]},{"i":"108","n":"207 St","a":40.86462,"o":-73.91882,"l":["1"]},{"i":"109","n":"Dyckman St","a":40.86053,"o":-73.92554,"l":["1"]},{"i":"110","n":"191 St","a":40.85522,"o":-73.92941,"l":["1"]},{"i":"111","n":"181 St","a":40.84951,"o":-73.9336,"l":["1"]},{"i":"112","n":"168 St-Washington Hts","a":40.84056,"o":-73.94013,"l":["1"]},{"i":"113","n":"157 St","a":40.83404,"o":-73.94489,"l":["1"]},{"i":"114","n":"145 St","a":40.82655,"o":-73.95036,"l":["1"]},{"i":"115","n":"137 St-City College","a":40.82201,"o":-73.95368,"l":["1"]},{"i":"116","n":"125 St","a":40.81558,"o":-73.95837,"l":["1"]},{"i":"117","n":"116 St-Columbia University","a":40.80772,"o":-73.96411,"l":["1"]},{"i":"118","n":"Cathedral Pkwy (110 St)","a":40.80397,"o":-73.96685,"l":["1"]},{"i":"119","n":"103 St","a":40.79945,"o":-73.96838,"l":["1"]},{"i":"120","n":"96 St","a":40.79392,"o":-73.97232,"l":["1","2","3"]},{"i":"121","n":"86 St","a":40.78864,"o":-73.97622,"l":["1","2"]},{"i":"122","n":"79 St","a":40.78393,"o":-73.97992,"l":["1","2"]},{"i":"123","n":"72 St","a":40.77845,"o":-73.98197,"l":["1","2","3"]},{"i":"124","n":"66 St-Lincoln Center","a":40.77344,"o":-73.98221,"l":["1","2"]},{"i":"125","n":"59 St-Columbus Circle","a":40.76825,"o":-73.98193,"l":["1","2"]},{"i":"126","n":"50 St","a":40.76173,"o":-73.98385,"l":["1","2"]},{"i":"127","n":"Times Sq-42 St","a":40.75529,"o":-73.98749,"l":["1","2","3"]},{"i":"128","n":"34 St-Penn Station","a":40.75037,"o":-73.99106,"l":["1","2","3"]},{"i":"129","n":"28 St","a":40.74721,"o":-73.99336,"l":["1","2"]},{"i":"130","n":"23 St","a":40.74408,"o":-73.99566,"l":["1","2"]},{"i":"131","n":"18 St","a":40.74104,"o":-73.99787,"l":["1","2"]},{"i":"132","n":"14 St","a":40.73783,"o":-74.0002,"l":["1","2","3"]},{"i":"133","n":"Christopher St-Stonewall","a":40.73342,"o":-74.00291,"l":["1","2"]},{"i":"134","n":"Houston St","a":40.72825,"o":-74.00537,"l":["1","2"]},{"i":"135","n":"Canal St","a":40.72285,"o":-74.00628,"l":["1","2"]},{"i":"136","n":"Franklin St","a":40.71932,"o":-74.00689,"l":["1","2"]},{"i":"137","n":"Chambers St","a":40.71548,"o":-74.00927,"l":["1","2","3"]},{"i":"138","n":"WTC Cortlandt","a":40.71184,"o":-74.01219,"l":["1","2"]},{"i":"139","n":"Rector St","a":40.70751,"o":-74.01378,"l":["1","2"]},{"i":"142","n":"South Ferry","a":40.70207,"o":-74.01366,"l":["1","2"]},{"i":"201","n":"Wakefield-241 St","a":40.90313,"o":-73.85062,"l":["2"]},{"i":"204","n":"Nereid Av","a":40.89838,"o":-73.85438,"l":["2","5"]},{"i":"205","n":"233 St","a":40.89319,"o":-73.85747,"l":["2","5"]},{"i":"206","n":"225 St","a":40.88802,"o":-73.86034,"l":["2","5"]},{"i":"207","n":"219 St","a":40.8839,"o":-73.86263,"l":["2","5"]},{"i":"208","n":"Gun Hill Rd","a":40.87785,"o":-73.86626,"l":["2","5"]},{"i":"209","n":"Burke Av","a":40.87136,"o":-73.86716,"l":["2","5"]},{"i":"210","n":"Allerton Av","a":40.86546,"o":-73.86735,"l":["2","5"]},{"i":"211","n":"Pelham Pkwy","a":40.85719,"o":-73.86762,"l":["2","5"]},{"i":"212","n":"Bronx Park East","a":40.84883,"o":-73.86846,"l":["2","5"]},{"i":"213","n":"E 180 St","a":40.84189,"o":-73.87349,"l":["2","5"]},{"i":"214","n":"West Farms Sq-E Tremont Av","a":40.84029,"o":-73.88005,"l":["2","5"]},{"i":"215","n":"174 St","a":40.83729,"o":-73.88773,"l":["2","5"]},{"i":"216","n":"Freeman St","a":40.82999,"o":-73.89186,"l":["2","5"]},{"i":"217","n":"Simpson St","a":40.82407,"o":-73.89306,"l":["2","5"]},{"i":"218","n":"Intervale Av","a":40.82218,"o":-73.89674,"l":["2","5"]},{"i":"219","n":"Prospect Av","a":40.81958,"o":-73.90177,"l":["2","5"]},{"i":"220","n":"Jackson Av","a":40.81649,"o":-73.90781,"l":["2","5"]},{"i":"221","n":"3 Av-149 St","a":40.81611,"o":-73.91776,"l":["2","5"]},{"i":"222","n":"149 St-Hostos","a":40.81841,"o":-73.92672,"l":["2","5"]},{"i":"224","n":"135 St","a":40.81423,"o":-73.94077,"l":["2","3"]},{"i":"225","n":"125 St","a":40.80775,"o":-73.94549,"l":["2","3"]},{"i":"226","n":"116 St","a":40.8021,"o":-73.94962,"l":["2","3"]},{"i":"227","n":"110 St-Malcolm X Plaza","a":40.79908,"o":-73.95182,"l":["2","3"]},{"i":"228","n":"Park Place","a":40.71305,"o":-74.00881,"l":["2","3"]},{"i":"229","n":"Fulton St","a":40.70942,"o":-74.00657,"l":["2","3"]},{"i":"230","n":"Wall St","a":40.70682,"o":-74.0091,"l":["2","3"]},{"i":"231","n":"Clark St","a":40.69747,"o":-73.99309,"l":["2","3"]},{"i":"232","n":"Borough Hall","a":40.69322,"o":-73.99,"l":["2","3"]},{"i":"233","n":"Hoyt St","a":40.69055,"o":-73.98507,"l":["2","3"]},{"i":"234","n":"Nevins St","a":40.68825,"o":-73.98049,"l":["2","3","4","5"]},{"i":"235","n":"Atlantic Av-Barclays Ctr","a":40.68436,"o":-73.97767,"l":["2","3","4","5"]},{"i":"236","n":"Bergen St","a":40.68083,"o":-73.9751,"l":["2","3","4"]},{"i":"237","n":"Grand Army Plaza","a":40.67524,"o":-73.97105,"l":["2","3","4"]},{"i":"238","n":"Eastern Pkwy-Brooklyn Museum","a":40.67199,"o":-73.96438,"l":["2","3","4"]},{"i":"239","n":"Franklin Av-Medgar Evers College","a":40.67068,"o":-73.95813,"l":["2","3","4","5"]},{"i":"241","n":"President St-Medgar Evers College","a":40.66788,"o":-73.95068,"l":["2","5"]},{"i":"242","n":"Sterling St","a":40.66274,"o":-73.95085,"l":["2","5"]},{"i":"243","n":"Winthrop St","a":40.65665,"o":-73.9502,"l":["2","5"]},{"i":"244","n":"Church Av","a":40.65084,"o":-73.94957,"l":["2","5"]},{"i":"245","n":"Beverly Rd","a":40.6451,"o":-73.94896,"l":["2","5"]},{"i":"246","n":"Newkirk Av-Little Haiti","a":40.63997,"o":-73.94841,"l":["2","5"]},{"i":"247","n":"Flatbush Av-Brooklyn College","a":40.63284,"o":-73.94764,"l":["2","5"]},{"i":"248","n":"Nostrand Av","a":40.66985,"o":-73.95047,"l":["2","3","4","5"]},{"i":"249","n":"Kingston Av","a":40.6694,"o":-73.94216,"l":["2","3","4","5"]},{"i":"250","n":"Crown Hts-Utica Av","a":40.6689,"o":-73.93294,"l":["2","3","4","5"]},{"i":"251","n":"Sutter Av-Rutland Rd","a":40.66472,"o":-73.92261,"l":["2","3","4","5"]},{"i":"252","n":"Saratoga Av","a":40.66145,"o":-73.91633,"l":["2","3","4","5"]},{"i":"253","n":"Rockaway Av","a":40.66255,"o":-73.90895,"l":["2","3","4","5"]},{"i":"254","n":"Junius St","a":40.66351,"o":-73.90245,"l":["2","3","4","5"]},{"i":"255","n":"Pennsylvania Av","a":40.66463,"o":-73.8949,"l":["2","3","4","5"]},{"i":"256","n":"Van Siclen Av","a":40.66545,"o":-73.88939,"l":["2","3","4","5"]},{"i":"257","n":"New Lots Av","a":40.66624,"o":-73.88408,"l":["2","3","4","5"]},{"i":"301","n":"Harlem-148 St","a":40.82388,"o":-73.93647,"l":["3"]},{"i":"302","n":"145 St","a":40.82042,"o":-73.93624,"l":["3"]},{"i":"401","n":"Woodlawn","a":40.88604,"o":-73.87875,"l":["4"]},{"i":"402","n":"Mosholu Pkwy","a":40.87975,"o":-73.88465,"l":["4"]},{"i":"405","n":"Bedford Park Blvd-Lehman College","a":40.87341,"o":-73.89006,"l":["4"]},{"i":"406","n":"Kingsbridge Rd","a":40.86776,"o":-73.89717,"l":["4"]},{"i":"407","n":"Fordham Rd","a":40.8628,"o":-73.90103,"l":["4"]},{"i":"408","n":"183 St","a":40.85841,"o":-73.90388,"l":["4"]},{"i":"409","n":"Burnside Av","a":40.85345,"o":-73.90768,"l":["4"]},{"i":"410","n":"176 St","a":40.84848,"o":-73.91179,"l":["4"]},{"i":"411","n":"Mt Eden Av","a":40.84443,"o":-73.91469,"l":["4"]},{"i":"412","n":"170 St","a":40.84007,"o":-73.91779,"l":["4"]},{"i":"413","n":"167 St","a":40.83554,"o":-73.9214,"l":["4"]},{"i":"414","n":"161 St-Yankee Stadium","a":40.82799,"o":-73.92583,"l":["4"]},{"i":"415","n":"149 St-Hostos","a":40.81838,"o":-73.92735,"l":["4","6"]},{"i":"416","n":"138 St-Grand Concourse","a":40.81322,"o":-73.92985,"l":["4","5","6"]},{"i":"418","n":"Fulton St","a":40.71037,"o":-74.00951,"l":["4","5"]},{"i":"419","n":"Wall St","a":40.70756,"o":-74.01186,"l":["4","5"]},{"i":"420","n":"Bowling Green","a":40.70482,"o":-74.01407,"l":["4","5"]},{"i":"423","n":"Borough Hall","a":40.6924,"o":-73.99015,"l":["4","5"]},{"i":"501","n":"Eastchester-Dyre Av","a":40.8883,"o":-73.83083,"l":["5"]},{"i":"502","n":"Baychester Av","a":40.87866,"o":-73.83859,"l":["5"]},{"i":"503","n":"Gun Hill Rd","a":40.86953,"o":-73.84638,"l":["5"]},{"i":"504","n":"Pelham Pkwy","a":40.85898,"o":-73.85536,"l":["5"]},{"i":"505","n":"Morris Park","a":40.85436,"o":-73.8605,"l":["5"]},{"i":"601","n":"Pelham Bay Park","a":40.85246,"o":-73.82812,"l":["6","6X"]},{"i":"602","n":"Buhre Av","a":40.84681,"o":-73.83257,"l":["6","6X"]},{"i":"603","n":"Middletown Rd","a":40.84386,"o":-73.83632,"l":["6","6X"]},{"i":"604","n":"Westchester Sq-E Tremont Av","a":40.83989,"o":-73.84295,"l":["6","6X"]},{"i":"606","n":"Zerega Av","a":40.83649,"o":-73.84704,"l":["6","6X"]},{"i":"607","n":"Castle Hill Av","a":40.83425,"o":-73.85122,"l":["6","6X"]},{"i":"608","n":"Parkchester","a":40.83323,"o":-73.86082,"l":["6","6X"]},{"i":"609","n":"St Lawrence Av","a":40.83151,"o":-73.86762,"l":["6"]},{"i":"610","n":"Morrison Av-Soundview","a":40.82952,"o":-73.87452,"l":["6"]},{"i":"611","n":"Elder Av","a":40.82858,"o":-73.87916,"l":["6"]},{"i":"612","n":"Whitlock Av","a":40.82652,"o":-73.88628,"l":["6"]},{"i":"613","n":"Hunts Point Av","a":40.82095,"o":-73.89055,"l":["6","6X"]},{"i":"614","n":"Longwood Av","a":40.8161,"o":-73.89643,"l":["6"]},{"i":"615","n":"E 149 St","a":40.81212,"o":-73.9041,"l":["6"]},{"i":"616","n":"E 143 St-St Mary's St","a":40.80872,"o":-73.90766,"l":["6"]},{"i":"617","n":"Cypress Av","a":40.80537,"o":-73.91404,"l":["6"]},{"i":"618","n":"Brook Av","a":40.80757,"o":-73.91924,"l":["6"]},{"i":"619","n":"3 Av-138 St","a":40.81048,"o":-73.92614,"l":["6","6X"]},{"i":"621","n":"125 St","a":40.80414,"o":-73.93759,"l":["4","5","6","6X"]},{"i":"622","n":"116 St","a":40.79863,"o":-73.94162,"l":["4","5","6","6X"]},{"i":"623","n":"110 St","a":40.79502,"o":-73.94425,"l":["4","5","6","6X"]},{"i":"624","n":"103 St","a":40.7906,"o":-73.94748,"l":["4","5","6","6X"]},{"i":"625","n":"96 St","a":40.78567,"o":-73.95107,"l":["4","5","6","6X"]},{"i":"626","n":"86 St","a":40.77949,"o":-73.95559,"l":["4","5","6","6X"]},{"i":"627","n":"77 St","a":40.77362,"o":-73.95987,"l":["4","5","6","6X"]},{"i":"628","n":"68 St-Hunter College","a":40.76814,"o":-73.96387,"l":["4","5","6","6X"]},{"i":"629","n":"59 St","a":40.76253,"o":-73.96797,"l":["4","5","6","6X"]},{"i":"630","n":"51 St","a":40.75711,"o":-73.97192,"l":["4","5","6","6X"]},{"i":"631","n":"Grand Central-42 St","a":40.75178,"o":-73.97685,"l":["4","5","6","6X"]},{"i":"632","n":"33 St","a":40.74608,"o":-73.98208,"l":["4","6","6X"]},{"i":"633","n":"28 St","a":40.74307,"o":-73.98426,"l":["4","6","6X"]},{"i":"634","n":"23 St-Baruch College","a":40.73986,"o":-73.9866,"l":["4","6","6X"]},{"i":"635","n":"14 St-Union Sq","a":40.73467,"o":-73.98995,"l":["4","5","6","6X"]},{"i":"636","n":"Astor Pl","a":40.73005,"o":-73.99107,"l":["4","6","6X"]},{"i":"637","n":"Bleecker St","a":40.72592,"o":-73.99466,"l":["4","6","6X"]},{"i":"638","n":"Spring St","a":40.7223,"o":-73.99714,"l":["4","6","6X"]},{"i":"639","n":"Canal St","a":40.7188,"o":-74.00019,"l":["4","6","6X"]},{"i":"640","n":"Brooklyn Bridge-City Hall","a":40.71307,"o":-74.00413,"l":["4","5","6","6X"]},{"i":"701","n":"Flushing-Main St","a":40.7596,"o":-73.83003,"l":["7","7X"]},{"i":"702","n":"Mets-Willets Point","a":40.75462,"o":-73.84562,"l":["7","7X"]},{"i":"705","n":"111 St","a":40.75173,"o":-73.85533,"l":["7"]},{"i":"706","n":"103 St-Corona Plaza","a":40.74986,"o":-73.8627,"l":["7"]},{"i":"707","n":"Junction Blvd","a":40.74914,"o":-73.86953,"l":["7","7X"]},{"i":"708","n":"90 St-Elmhurst Av","a":40.74841,"o":-73.87661,"l":["7"]},{"i":"709","n":"82 St-Jackson Hts","a":40.74766,"o":-73.8837,"l":["7"]},{"i":"710","n":"74 St-Broadway","a":40.74685,"o":-73.89139,"l":["7","7X"]},{"i":"711","n":"69 St","a":40.74632,"o":-73.8964,"l":["7","7X"]},{"i":"712","n":"61 St-Woodside","a":40.74563,"o":-73.90298,"l":["7","7X"]},{"i":"713","n":"52 St","a":40.74415,"o":-73.91255,"l":["7","7X"]},{"i":"714","n":"46 St-Bliss St","a":40.74313,"o":-73.91844,"l":["7","7X"]},{"i":"715","n":"40 St-Lowery St","a":40.74378,"o":-73.92402,"l":["7","7X"]},{"i":"716","n":"33 St-Rawson St","a":40.74459,"o":-73.931,"l":["7","7X"]},{"i":"718","n":"Queensboro Plaza","a":40.75058,"o":-73.9402,"l":["7","7X"]},{"i":"719","n":"Court Sq","a":40.74702,"o":-73.94526,"l":["7","7X"]},{"i":"720","n":"Hunters Point Av","a":40.74222,"o":-73.94892,"l":["7","7X"]},{"i":"721","n":"Vernon Blvd-Jackson Av","a":40.74263,"o":-73.95358,"l":["7","7X"]},{"i":"723","n":"Grand Central-42 St","a":40.75143,"o":-73.97604,"l":["7","7X"]},{"i":"724","n":"5 Av","a":40.75382,"o":-73.98196,"l":["7","7X"]},{"i":"725","n":"Times Sq-42 St","a":40.75548,"o":-73.98769,"l":["7","7X"]},{"i":"726","n":"34 St-Hudson Yards","a":40.75588,"o":-74.00191,"l":["7","7X"]},{"i":"901","n":"Grand Central-42 St","a":40.75277,"o":-73.97919,"l":["GS"]},{"i":"902","n":"Times Sq-42 St","a":40.75598,"o":-73.98623,"l":["GS"]},{"i":"A02","n":"Inwood-207 St","a":40.86807,"o":-73.9199,"l":["A"]},{"i":"A03","n":"Dyckman St","a":40.86549,"o":-73.92727,"l":["A"]},{"i":"A05","n":"190 St","a":40.85902,"o":-73.93418,"l":["A"]},{"i":"A06","n":"181 St","a":40.85169,"o":-73.93797,"l":["A"]},{"i":"A07","n":"175 St","a":40.84739,"o":-73.9397,"l":["A"]},{"i":"A09","n":"168 St","a":40.84072,"o":-73.93956,"l":["A","C"]},{"i":"A10","n":"163 St-Amsterdam Av","a":40.83601,"o":-73.93989,"l":["A","C"]},{"i":"A11","n":"155 St","a":40.83052,"o":-73.94151,"l":["A","C"]},{"i":"A12","n":"145 St","a":40.82478,"o":-73.94422,"l":["A","C"]},{"i":"A14","n":"135 St","a":40.81789,"o":-73.94765,"l":["A","B","C"]},{"i":"A15","n":"125 St","a":40.81111,"o":-73.95234,"l":["A","B","C","D"]},{"i":"A16","n":"116 St","a":40.80508,"o":-73.95488,"l":["A","B","C"]},{"i":"A17","n":"Cathedral Pkwy (110 St)","a":40.8006,"o":-73.95816,"l":["A","B","C"]},{"i":"A18","n":"103 St","a":40.79609,"o":-73.96145,"l":["A","B","C"]},{"i":"A19","n":"96 St","a":40.79164,"o":-73.9647,"l":["A","B","C"]},{"i":"A20","n":"86 St","a":40.78587,"o":-73.96892,"l":["A","B","C"]},{"i":"A21","n":"81 St-Museum of Natural History","a":40.78143,"o":-73.97214,"l":["A","B","C"]},{"i":"A22","n":"72 St","a":40.77559,"o":-73.97641,"l":["A","B","C"]},{"i":"A24","n":"59 St-Columbus Circle","a":40.7683,"o":-73.98174,"l":["A","B","C","D"]},{"i":"A25","n":"50 St","a":40.76246,"o":-73.98598,"l":["A","C","D","E","F"]},{"i":"A27","n":"42 St-Port Authority Bus Terminal","a":40.75731,"o":-73.98973,"l":["A","C","D","E","F"]},{"i":"A28","n":"34 St-Penn Station","a":40.75229,"o":-73.99339,"l":["A","C","D","E","F"]},{"i":"A30","n":"23 St","a":40.74591,"o":-73.99804,"l":["A","C","D","E","F"]},{"i":"A31","n":"14 St","a":40.74089,"o":-74.00169,"l":["A","C","D","E","F"]},{"i":"A32","n":"W 4 St-Wash Sq","a":40.73234,"o":-74.0005,"l":["A","C","D","E","F"]},{"i":"A33","n":"Spring St","a":40.72623,"o":-74.00374,"l":["A","C","D","E","F"]},{"i":"A34","n":"Canal St","a":40.72082,"o":-74.00523,"l":["A","C","D","E","F"]},{"i":"A36","n":"Chambers St","a":40.71411,"o":-74.00858,"l":["A","C","F"]},{"i":"A38","n":"Fulton St","a":40.7102,"o":-74.00769,"l":["A","C","F"]},{"i":"A40","n":"High St","a":40.69934,"o":-73.99053,"l":["A","C","F"]},{"i":"A41","n":"Jay St-MetroTech","a":40.69234,"o":-73.98734,"l":["A","C","F","FX"]},{"i":"A42","n":"Hoyt-Schermerhorn Sts","a":40.68848,"o":-73.985,"l":["A","C","G"]},{"i":"A43","n":"Lafayette Av","a":40.68611,"o":-73.97395,"l":["A","C"]},{"i":"A44","n":"Clinton-Washington Avs","a":40.68326,"o":-73.96584,"l":["A","C"]},{"i":"A45","n":"Franklin Av","a":40.68138,"o":-73.95685,"l":["A","C"]},{"i":"A46","n":"Nostrand Av","a":40.68044,"o":-73.95043,"l":["A","C"]},{"i":"A47","n":"Kingston-Throop Avs","a":40.67992,"o":-73.94086,"l":["A","C"]},{"i":"A48","n":"Utica Av","a":40.67936,"o":-73.93073,"l":["A","C"]},{"i":"A49","n":"Ralph Av","a":40.67882,"o":-73.92079,"l":["A","C"]},{"i":"A50","n":"Rockaway Av","a":40.67834,"o":-73.91195,"l":["A","C"]},{"i":"A51","n":"Broadway Junction","a":40.67833,"o":-73.90532,"l":["A","C"]},{"i":"A52","n":"Liberty Av","a":40.67454,"o":-73.89655,"l":["A","C"]},{"i":"A53","n":"Van Siclen Av","a":40.67271,"o":-73.89036,"l":["A","C"]},{"i":"A54","n":"Shepherd Av","a":40.67413,"o":-73.88075,"l":["A","C"]},{"i":"A55","n":"Euclid Av","a":40.67538,"o":-73.87211,"l":["A","C"]},{"i":"A57","n":"Grant Av","a":40.67704,"o":-73.86505,"l":["A"]},{"i":"A59","n":"80 St","a":40.67937,"o":-73.85899,"l":["A"]},{"i":"A60","n":"88 St","a":40.67984,"o":-73.85147,"l":["A"]},{"i":"A61","n":"Rockaway Blvd","a":40.68043,"o":-73.84385,"l":["A","H"]},{"i":"A63","n":"104 St","a":40.68171,"o":-73.83768,"l":["A"]},{"i":"A64","n":"111 St","a":40.68433,"o":-73.83216,"l":["A"]},{"i":"A65","n":"Ozone Park-Lefferts Blvd","a":40.68595,"o":-73.8258,"l":["A"]},{"i":"B04","n":"21 St-Queensbridge","a":40.7542,"o":-73.94284,"l":["E","F","M"]},{"i":"B06","n":"Roosevelt Island","a":40.75914,"o":-73.95326,"l":["E","F","M"]},{"i":"B08","n":"Lexington Av/63 St","a":40.76463,"o":-73.96611,"l":["E","F","M","N","Q","R"]},{"i":"B10","n":"57 St","a":40.76397,"o":-73.97745,"l":["F","M"]},{"i":"B12","n":"9 Av","a":40.64629,"o":-73.99432,"l":["D","R","W"]},{"i":"B13","n":"Fort Hamilton Pkwy","a":40.64091,"o":-73.9943,"l":["D"]},{"i":"B14","n":"50 St","a":40.63626,"o":-73.99479,"l":["D"]},{"i":"B15","n":"55 St","a":40.63144,"o":-73.99548,"l":["D"]},{"i":"B16","n":"62 St","a":40.62647,"o":-73.99689,"l":["D","R","W"]},{"i":"B17","n":"71 St","a":40.61959,"o":-73.99886,"l":["D"]},{"i":"B18","n":"79 St","a":40.6135,"o":-74.00061,"l":["D"]},{"i":"B19","n":"18 Av","a":40.60795,"o":-74.00174,"l":["D"]},{"i":"B20","n":"20 Av","a":40.60456,"o":-73.99817,"l":["D"]},{"i":"B21","n":"Bay Pkwy","a":40.60187,"o":-73.99373,"l":["D","R","W"]},{"i":"B22","n":"25 Av","a":40.5977,"o":-73.98683,"l":["D"]},{"i":"B23","n":"Bay 50 St","a":40.58884,"o":-73.98377,"l":["D"]},{"i":"D01","n":"Norwood-205 St","a":40.87481,"o":-73.87886,"l":["D"]},{"i":"D03","n":"Bedford Park Blvd","a":40.87324,"o":-73.88714,"l":["B","D"]},{"i":"D04","n":"Kingsbridge Rd","a":40.86698,"o":-73.89351,"l":["B","D"]},{"i":"D05","n":"Fordham Rd","a":40.8613,"o":-73.89775,"l":["B","D"]},{"i":"D06","n":"182-183 Sts","a":40.85609,"o":-73.90074,"l":["B","D"]},{"i":"D07","n":"Tremont Av","a":40.85041,"o":-73.90523,"l":["B","D"]},{"i":"D08","n":"174-175 Sts","a":40.8459,"o":-73.91014,"l":["B","D"]},{"i":"D09","n":"170 St","a":40.83931,"o":-73.9134,"l":["B","D"]},{"i":"D10","n":"167 St","a":40.83377,"o":-73.91844,"l":["B","D"]},{"i":"D11","n":"161 St-Yankee Stadium","a":40.82791,"o":-73.92565,"l":["B","D"]},{"i":"D12","n":"155 St","a":40.83013,"o":-73.93821,"l":["B","D"]},{"i":"D13","n":"145 St","a":40.82478,"o":-73.94422,"l":["B","D"]},{"i":"D14","n":"7 Av","a":40.76286,"o":-73.98164,"l":["B","C","D","E","F"]},{"i":"D15","n":"47-50 Sts-Rockefeller Ctr","a":40.75866,"o":-73.98133,"l":["B","C","D","F","FX","M"]},{"i":"D16","n":"42 St-Bryant Pk","a":40.75422,"o":-73.98457,"l":["B","C","D","F","FX","M"]},{"i":"D17","n":"34 St-Herald Sq","a":40.74972,"o":-73.98782,"l":["B","C","D","F","FX","M"]},{"i":"D18","n":"23 St","a":40.74288,"o":-73.99282,"l":["C","F","FX","M"]},{"i":"D19","n":"14 St","a":40.73823,"o":-73.99621,"l":["C","F","FX","M"]},{"i":"D20","n":"W 4 St-Wash Sq","a":40.73234,"o":-74.0005,"l":["B","C","D","F","FX","M"]},{"i":"D21","n":"Broadway-Lafayette St","a":40.7253,"o":-73.9962,"l":["B","C","D","F","FX","M"]},{"i":"D22","n":"Grand St","a":40.71827,"o":-73.99375,"l":["B","D"]},{"i":"D24","n":"Atlantic Av-Barclays Ctr","a":40.68446,"o":-73.97689,"l":["B","Q"]},{"i":"D25","n":"7 Av","a":40.67705,"o":-73.97237,"l":["B","Q"]},{"i":"D26","n":"Prospect Park","a":40.66161,"o":-73.96225,"l":["B","FS","Q"]},{"i":"D27","n":"Parkside Av","a":40.65529,"o":-73.96149,"l":["Q"]},{"i":"D28","n":"Church Av","a":40.65053,"o":-73.96298,"l":["B","Q"]},{"i":"D29","n":"Beverley Rd","a":40.64403,"o":-73.96449,"l":["Q"]},{"i":"D30","n":"Cortelyou Rd","a":40.64093,"o":-73.96389,"l":["Q"]},{"i":"D31","n":"Newkirk Plaza","a":40.63508,"o":-73.96279,"l":["B","Q"]},{"i":"D32","n":"Avenue H","a":40.62927,"o":-73.96164,"l":["Q"]},{"i":"D33","n":"Avenue J","a":40.62504,"o":-73.9608,"l":["Q"]},{"i":"D34","n":"Avenue M","a":40.61762,"o":-73.9594,"l":["Q"]},{"i":"D35","n":"Kings Hwy","a":40.60867,"o":-73.95773,"l":["B","Q"]},{"i":"D37","n":"Avenue U","a":40.5993,"o":-73.95593,"l":["Q"]},{"i":"D38","n":"Neck Rd","a":40.59525,"o":-73.95516,"l":["Q"]},{"i":"D39","n":"Sheepshead Bay","a":40.5869,"o":-73.95416,"l":["B","Q"]},{"i":"D40","n":"Brighton Beach","a":40.57762,"o":-73.96138,"l":["B","Q"]},{"i":"D41","n":"Ocean Pkwy","a":40.57631,"o":-73.9685,"l":["Q"]},{"i":"D42","n":"W 8 St-NY Aquarium","a":40.57613,"o":-73.97594,"l":["F","FX","Q"]},{"i":"D43","n":"Coney Island-Stillwell Av","a":40.57742,"o":-73.98123,"l":["D","F","FX","N","Q"]},{"i":"E01","n":"World Trade Center","a":40.71258,"o":-74.00978,"l":["D","E"]},{"i":"F01","n":"Jamaica-179 St","a":40.71265,"o":-73.78382,"l":["E","F","FX"]},{"i":"F02","n":"169 St","a":40.71047,"o":-73.7936,"l":["E","F","FX"]},{"i":"F03","n":"Parsons Blvd","a":40.70756,"o":-73.80333,"l":["E","F","FX"]},{"i":"F04","n":"Sutphin Blvd","a":40.70546,"o":-73.81071,"l":["E","F","FX"]},{"i":"F05","n":"Briarwood","a":40.70918,"o":-73.82057,"l":["E","F","FX"]},{"i":"F06","n":"Kew Gardens-Union Tpke","a":40.71444,"o":-73.83101,"l":["E","F","FX"]},{"i":"F07","n":"75 Av","a":40.71833,"o":-73.83732,"l":["E","F","FX"]},{"i":"F09","n":"Court Sq-23 St","a":40.74785,"o":-73.946,"l":["E","F","FX"]},{"i":"F11","n":"Lexington Av/53 St","a":40.75755,"o":-73.96905,"l":["E","F","FX"]},{"i":"F12","n":"5 Av/53 St","a":40.76017,"o":-73.97522,"l":["E","F","FX"]},{"i":"F14","n":"2 Av","a":40.7234,"o":-73.98994,"l":["C","F","FX"]},{"i":"F15","n":"Delancey St-Essex St","a":40.71861,"o":-73.98811,"l":["C","F","FX"]},{"i":"F16","n":"East Broadway","a":40.71372,"o":-73.99017,"l":["C","F","FX"]},{"i":"F18","n":"York St","a":40.7014,"o":-73.98675,"l":["C","F","FX"]},{"i":"F20","n":"Bergen St","a":40.68615,"o":-73.99086,"l":["F","G"]},{"i":"F21","n":"Carroll St","a":40.6803,"o":-73.99505,"l":["F","G"]},{"i":"F22","n":"Smith-9 Sts","a":40.67358,"o":-73.99596,"l":["F","G"]},{"i":"F23","n":"4 Av-9 St","a":40.67027,"o":-73.98978,"l":["F","G"]},{"i":"F24","n":"7 Av","a":40.66627,"o":-73.98031,"l":["F","FX","G"]},{"i":"F25","n":"15 St-Prospect Park","a":40.66036,"o":-73.97949,"l":["F","G"]},{"i":"F26","n":"Fort Hamilton Pkwy","a":40.65078,"o":-73.97578,"l":["F","G"]},{"i":"F27","n":"Church Av","a":40.64404,"o":-73.97968,"l":["F","FX","G"]},{"i":"F29","n":"Ditmas Av","a":40.63612,"o":-73.97817,"l":["F","FX"]},{"i":"F30","n":"18 Av","a":40.62976,"o":-73.97697,"l":["F","FX"]},{"i":"F31","n":"Avenue I","a":40.62532,"o":-73.97613,"l":["F","FX"]},{"i":"F32","n":"Bay Pkwy","a":40.62077,"o":-73.97526,"l":["F","FX"]},{"i":"F33","n":"Avenue N","a":40.61514,"o":-73.9742,"l":["F","FX"]},{"i":"F34","n":"Avenue P","a":40.60894,"o":-73.97302,"l":["F","FX"]},{"i":"F35","n":"Kings Hwy","a":40.60322,"o":-73.97236,"l":["F","FX"]},{"i":"F36","n":"Avenue U","a":40.59606,"o":-73.97336,"l":["F","FX"]},{"i":"F38","n":"Avenue X","a":40.58962,"o":-73.97425,"l":["F","FX"]},{"i":"F39","n":"Neptune Av","a":40.58101,"o":-73.97457,"l":["F","FX"]},{"i":"G05","n":"Jamaica Center-Parsons/Archer","a":40.70215,"o":-73.80111,"l":["E","J","Z"]},{"i":"G06","n":"Sutphin Blvd-Archer Av-JFK Airport","a":40.70049,"o":-73.80797,"l":["E","J","Z"]},{"i":"G07","n":"Jamaica-Van Wyck","a":40.70257,"o":-73.81686,"l":["E"]},{"i":"G08","n":"Forest Hills-71 Av","a":40.72169,"o":-73.84452,"l":["E","F","FX","M","R"]},{"i":"G09","n":"67 Av","a":40.72652,"o":-73.85272,"l":["E","F","M","R"]},{"i":"G10","n":"63 Dr-Rego Park","a":40.72985,"o":-73.8616,"l":["E","F","M","R"]},{"i":"G11","n":"Woodhaven Blvd","a":40.73311,"o":-73.86923,"l":["E","F","M","R"]},{"i":"G12","n":"Grand Av-Newtown","a":40.73701,"o":-73.87722,"l":["E","F","M","R"]},{"i":"G13","n":"Elmhurst Av","a":40.74245,"o":-73.88202,"l":["E","F","M","R"]},{"i":"G14","n":"Jackson Hts-Roosevelt Av","a":40.74664,"o":-73.89134,"l":["E","F","FX","M","R"]},{"i":"G15","n":"65 St","a":40.74967,"o":-73.89845,"l":["E","F","M","R"]},{"i":"G16","n":"Northern Blvd","a":40.75288,"o":-73.90601,"l":["E","F","M","R"]},{"i":"G18","n":"46 St","a":40.75631,"o":-73.91333,"l":["E","F","M","R"]},{"i":"G19","n":"Steinway St","a":40.75688,"o":-73.92074,"l":["E","F","M","R"]},{"i":"G20","n":"36 St","a":40.75204,"o":-73.92878,"l":["E","F","M","R"]},{"i":"G21","n":"Queens Plaza","a":40.74897,"o":-73.93724,"l":["E","F","FX","R"]},{"i":"G22","n":"Court Sq","a":40.74655,"o":-73.94383,"l":["G"]},{"i":"G24","n":"21 St","a":40.74406,"o":-73.94972,"l":["G"]},{"i":"G26","n":"Greenpoint Av","a":40.73135,"o":-73.95445,"l":["G"]},{"i":"G28","n":"Nassau Av","a":40.72463,"o":-73.95128,"l":["G"]},{"i":"G29","n":"Metropolitan Av","a":40.71279,"o":-73.95142,"l":["G"]},{"i":"G30","n":"Broadway","a":40.70609,"o":-73.95031,"l":["G"]},{"i":"G31","n":"Flushing Av","a":40.70038,"o":-73.95023,"l":["G"]},{"i":"G32","n":"Myrtle-Willoughby Avs","a":40.69457,"o":-73.94905,"l":["G"]},{"i":"G33","n":"Bedford-Nostrand Avs","a":40.68963,"o":-73.95352,"l":["G"]},{"i":"G34","n":"Classon Av","a":40.68887,"o":-73.96007,"l":["G"]},{"i":"G35","n":"Clinton-Washington Avs","a":40.68809,"o":-73.96684,"l":["G"]},{"i":"G36","n":"Fulton St","a":40.68712,"o":-73.97537,"l":["G"]},{"i":"H01","n":"Aqueduct Racetrack","a":40.6721,"o":-73.83592,"l":["A","H"]},{"i":"H02","n":"Aqueduct-N Conduit Av","a":40.66823,"o":-73.83406,"l":["A","H"]},{"i":"H03","n":"Howard Beach-JFK Airport","a":40.66048,"o":-73.8303,"l":["A","H"]},{"i":"H04","n":"Broad Channel","a":40.60838,"o":-73.81592,"l":["A","H"]},{"i":"H06","n":"Beach 67 St","a":40.59093,"o":-73.79692,"l":["A"]},{"i":"H07","n":"Beach 60 St","a":40.59237,"o":-73.78852,"l":["A"]},{"i":"H08","n":"Beach 44 St","a":40.59294,"o":-73.77601,"l":["A"]},{"i":"H09","n":"Beach 36 St","a":40.5954,"o":-73.76817,"l":["A"]},{"i":"H10","n":"Beach 25 St","a":40.60007,"o":-73.76135,"l":["A"]},{"i":"H11","n":"Far Rockaway-Mott Av","a":40.60399,"o":-73.7554,"l":["A"]},{"i":"H12","n":"Beach 90 St","a":40.58803,"o":-73.81364,"l":["A","H"]},{"i":"H13","n":"Beach 98 St","a":40.58531,"o":-73.82056,"l":["A","H"]},{"i":"H14","n":"Beach 105 St","a":40.58321,"o":-73.82756,"l":["A","H"]},{"i":"H15","n":"Rockaway Park-Beach 116 St","a":40.5809,"o":-73.83559,"l":["A","H"]},{"i":"J12","n":"121 St","a":40.70049,"o":-73.82829,"l":["J","Z"]},{"i":"J13","n":"111 St","a":40.69742,"o":-73.83634,"l":["J"]},{"i":"J14","n":"104 St","a":40.69518,"o":-73.84433,"l":["J","Z"]},{"i":"J15","n":"Woodhaven Blvd","a":40.69388,"o":-73.85158,"l":["J","Z"]},{"i":"J16","n":"85 St-Forest Pkwy","a":40.69244,"o":-73.86001,"l":["J"]},{"i":"J17","n":"75 St-Elderts Ln","a":40.69132,"o":-73.86714,"l":["J","Z"]},{"i":"J19","n":"Cypress Hills","a":40.68994,"o":-73.87255,"l":["J"]},{"i":"J20","n":"Crescent St","a":40.68319,"o":-73.87378,"l":["J","Z"]},{"i":"J21","n":"Norwood Av","a":40.68141,"o":-73.88004,"l":["J","Z"]},{"i":"J22","n":"Cleveland St","a":40.67995,"o":-73.88464,"l":["J"]},{"i":"J23","n":"Van Siclen Av","a":40.67802,"o":-73.89169,"l":["J","Z"]},{"i":"J24","n":"Alabama Av","a":40.67699,"o":-73.89865,"l":["J","Z"]},{"i":"J27","n":"Broadway Junction","a":40.6795,"o":-73.90451,"l":["J","Z"]},{"i":"J28","n":"Chauncey St","a":40.68289,"o":-73.91046,"l":["J","Z"]},{"i":"J29","n":"Halsey St","a":40.68637,"o":-73.91656,"l":["J"]},{"i":"J30","n":"Gates Av","a":40.68963,"o":-73.92227,"l":["J","Z"]},{"i":"J31","n":"Kosciuszko St","a":40.69334,"o":-73.92881,"l":["J"]},{"i":"L01","n":"8 Av","a":40.73978,"o":-74.00258,"l":["L"]},{"i":"L02","n":"6 Av","a":40.73734,"o":-73.99679,"l":["L"]},{"i":"L03","n":"14 St-Union Sq","a":40.73479,"o":-73.99073,"l":["L"]},{"i":"L05","n":"3 Av","a":40.73285,"o":-73.98612,"l":["L"]},{"i":"L06","n":"1 Av","a":40.73095,"o":-73.98163,"l":["L"]},{"i":"L08","n":"Bedford Av","a":40.7173,"o":-73.95687,"l":["L"]},{"i":"L10","n":"Lorimer St","a":40.71406,"o":-73.95028,"l":["L"]},{"i":"L11","n":"Graham Av","a":40.71457,"o":-73.94405,"l":["L"]},{"i":"L12","n":"Grand St","a":40.71193,"o":-73.94067,"l":["L"]},{"i":"L13","n":"Montrose Av","a":40.70774,"o":-73.93985,"l":["L"]},{"i":"L14","n":"Morgan Av","a":40.70615,"o":-73.93315,"l":["L"]},{"i":"L15","n":"Jefferson St","a":40.70661,"o":-73.92291,"l":["L"]},{"i":"L16","n":"DeKalb Av","a":40.70381,"o":-73.91842,"l":["L"]},{"i":"L17","n":"Myrtle-Wyckoff Avs","a":40.69981,"o":-73.91159,"l":["L"]},{"i":"L19","n":"Halsey St","a":40.6956,"o":-73.90408,"l":["L"]},{"i":"L20","n":"Wilson Av","a":40.68876,"o":-73.90405,"l":["L"]},{"i":"L21","n":"Bushwick Av-Aberdeen St","a":40.68283,"o":-73.90525,"l":["L"]},{"i":"L22","n":"Broadway Junction","a":40.67886,"o":-73.90324,"l":["L"]},{"i":"L24","n":"Atlantic Av","a":40.67535,"o":-73.9031,"l":["L"]},{"i":"L25","n":"Sutter Av","a":40.66937,"o":-73.90197,"l":["L"]},{"i":"L26","n":"Livonia Av","a":40.66404,"o":-73.90057,"l":["L"]},{"i":"L27","n":"New Lots Av","a":40.65873,"o":-73.89923,"l":["L"]},{"i":"L28","n":"East 105 St","a":40.65057,"o":-73.89948,"l":["L"]},{"i":"L29","n":"Canarsie-Rockaway Pkwy","a":40.64665,"o":-73.90185,"l":["L"]},{"i":"M01","n":"Middle Village-Metropolitan Av","a":40.7114,"o":-73.8896,"l":["M"]},{"i":"M04","n":"Fresh Pond Rd","a":40.70619,"o":-73.89588,"l":["M"]},{"i":"M05","n":"Forest Av","a":40.70442,"o":-73.90308,"l":["M"]},{"i":"M06","n":"Seneca Av","a":40.70276,"o":-73.90774,"l":["M"]},{"i":"M08","n":"Myrtle-Wyckoff Avs","a":40.69943,"o":-73.91239,"l":["M"]},{"i":"M09","n":"Knickerbocker Av","a":40.69866,"o":-73.91971,"l":["M"]},{"i":"M10","n":"Central Av","a":40.69786,"o":-73.9274,"l":["M"]},{"i":"M11","n":"Myrtle Av","a":40.69721,"o":-73.93566,"l":["J","M","Z"]},{"i":"M12","n":"Flushing Av","a":40.70026,"o":-73.94113,"l":["J","M"]},{"i":"M13","n":"Lorimer St","a":40.70387,"o":-73.94741,"l":["J","M"]},{"i":"M14","n":"Hewes St","a":40.70687,"o":-73.95343,"l":["J","M"]},{"i":"M16","n":"Marcy Av","a":40.70836,"o":-73.95776,"l":["J","M","Z"]},{"i":"M18","n":"Delancey St-Essex St","a":40.71831,"o":-73.98744,"l":["J","M","Z"]},{"i":"M19","n":"Bowery","a":40.72028,"o":-73.99392,"l":["J","Z"]},{"i":"M20","n":"Canal St","a":40.71809,"o":-73.99989,"l":["J","Z"]},{"i":"M21","n":"Chambers St","a":40.71324,"o":-74.0034,"l":["J","Z"]},{"i":"M22","n":"Fulton St","a":40.71037,"o":-74.00758,"l":["J","Z"]},{"i":"M23","n":"Broad St","a":40.70648,"o":-74.01106,"l":["J","Z"]},{"i":"N02","n":"8 Av","a":40.63506,"o":-74.01172,"l":["N","W"]},{"i":"N03","n":"Fort Hamilton Pkwy","a":40.63139,"o":-74.00535,"l":["N","W"]},{"i":"N04","n":"New Utrecht Av","a":40.62484,"o":-73.99635,"l":["N","W"]},{"i":"N05","n":"18 Av","a":40.62067,"o":-73.99041,"l":["N","W"]},{"i":"N06","n":"20 Av","a":40.61741,"o":-73.98503,"l":["N","W"]},{"i":"N07","n":"Bay Pkwy","a":40.61181,"o":-73.98185,"l":["N","W"]},{"i":"N08","n":"Kings Hwy","a":40.60392,"o":-73.98035,"l":["N","W"]},{"i":"N09","n":"Avenue U","a":40.59747,"o":-73.97914,"l":["N","W"]},{"i":"N10","n":"86 St","a":40.59272,"o":-73.97823,"l":["N","W"]},{"i":"Q01","n":"Canal St","a":40.71838,"o":-74.00046,"l":["N","Q"]},{"i":"Q03","n":"72 St","a":40.7688,"o":-73.95842,"l":["M","N","Q","R"]},{"i":"Q04","n":"86 St","a":40.77789,"o":-73.95179,"l":["M","N","Q","R"]},{"i":"Q05","n":"96 St","a":40.78432,"o":-73.94715,"l":["M","N","Q","R"]},{"i":"R01","n":"Astoria-Ditmars Blvd","a":40.77504,"o":-73.91203,"l":["N","W"]},{"i":"R03","n":"Astoria Blvd","a":40.77026,"o":-73.91784,"l":["N","W"]},{"i":"R04","n":"30 Av","a":40.76678,"o":-73.92148,"l":["N","W"]},{"i":"R05","n":"Broadway","a":40.76182,"o":-73.92551,"l":["N","W"]},{"i":"R06","n":"36 Av","a":40.7568,"o":-73.92957,"l":["N","W"]},{"i":"R08","n":"39 Av-Dutch Kills","a":40.75288,"o":-73.93276,"l":["N","W"]},{"i":"R09","n":"Queensboro Plaza","a":40.75058,"o":-73.9402,"l":["N","W"]},{"i":"R11","n":"Lexington Av/59 St","a":40.76266,"o":-73.96726,"l":["N","R","W"]},{"i":"R13","n":"5 Av/59 St","a":40.76481,"o":-73.97335,"l":["N","R","W"]},{"i":"R14","n":"57 St-7 Av","a":40.76466,"o":-73.98066,"l":["E","N","Q","R","W"]},{"i":"R15","n":"49 St","a":40.7599,"o":-73.98414,"l":["N","Q","R","W"]},{"i":"R16","n":"Times Sq-42 St","a":40.75467,"o":-73.98675,"l":["E","N","Q","R","W"]},{"i":"R17","n":"34 St-Herald Sq","a":40.74957,"o":-73.98795,"l":["E","N","Q","R","W"]},{"i":"R18","n":"28 St","a":40.74549,"o":-73.98869,"l":["N","Q","R","W"]},{"i":"R19","n":"23 St","a":40.7413,"o":-73.98934,"l":["N","Q","R","W"]},{"i":"R20","n":"14 St-Union Sq","a":40.73574,"o":-73.99057,"l":["N","Q","R","W"]},{"i":"R21","n":"8 St-NYU","a":40.73033,"o":-73.99263,"l":["N","Q","R","W"]},{"i":"R22","n":"Prince St","a":40.72433,"o":-73.9977,"l":["N","Q","R","W"]},{"i":"R23","n":"Canal St","a":40.71953,"o":-74.00177,"l":["N","R","W"]},{"i":"R24","n":"City Hall","a":40.71328,"o":-74.00698,"l":["N","R","W"]},{"i":"R25","n":"Cortlandt St","a":40.71067,"o":-74.01103,"l":["N","R","W"]},{"i":"R26","n":"Rector St","a":40.70722,"o":-74.01334,"l":["N","R","W"]},{"i":"R27","n":"Whitehall St-South Ferry","a":40.70309,"o":-74.01299,"l":["N","R","W"]},{"i":"R28","n":"Court St","a":40.6941,"o":-73.99178,"l":["N","R","W"]},{"i":"R29","n":"Jay St-MetroTech","a":40.69218,"o":-73.98594,"l":["N","R","W"]},{"i":"R30","n":"DeKalb Av","a":40.69064,"o":-73.98182,"l":["B","D","N","Q","R","W"]},{"i":"R31","n":"Atlantic Av-Barclays Ctr","a":40.68367,"o":-73.97881,"l":["D","N","R","W"]},{"i":"R32","n":"Union St","a":40.67732,"o":-73.98311,"l":["D","N","R","W"]},{"i":"R33","n":"4 Av-9 St","a":40.67085,"o":-73.9883,"l":["D","N","R","W"]},{"i":"R34","n":"Prospect Av","a":40.66541,"o":-73.99287,"l":["D","N","R","W"]},{"i":"R35","n":"25 St","a":40.6604,"o":-73.99809,"l":["D","N","R","W"]},{"i":"R36","n":"36 St","a":40.65514,"o":-74.00355,"l":["D","N","R","W"]},{"i":"R39","n":"45 St","a":40.64894,"o":-74.01001,"l":["N","R","W"]},{"i":"R40","n":"53 St","a":40.64507,"o":-74.01403,"l":["N","R","W"]},{"i":"R41","n":"59 St","a":40.64136,"o":-74.01788,"l":["N","R","W"]},{"i":"R42","n":"Bay Ridge Av","a":40.63497,"o":-74.02338,"l":["R"]},{"i":"R43","n":"77 St","a":40.62974,"o":-74.02551,"l":["R"]},{"i":"R44","n":"86 St","a":40.62269,"o":-74.0284,"l":["R"]},{"i":"R45","n":"Bay Ridge-95 St","a":40.61662,"o":-74.03088,"l":["R"]},{"i":"S01","n":"Franklin Av","a":40.6806,"o":-73.95583,"l":["FS"]},{"i":"S03","n":"Park Pl","a":40.67477,"o":-73.95762,"l":["FS"]},{"i":"S04","n":"Botanic Garden","a":40.67034,"o":-73.95924,"l":["FS"]},{"i":"S09","n":"Tottenville","a":40.51276,"o":-74.25196,"l":["SI"]},{"i":"S11","n":"Arthur Kill","a":40.51658,"o":-74.2421,"l":["SI"]},{"i":"S13","n":"Richmond Valley","a":40.51963,"o":-74.22914,"l":["SI"]},{"i":"S14","n":"Pleasant Plains","a":40.52241,"o":-74.21785,"l":["SI"]},{"i":"S15","n":"Prince's Bay","a":40.52551,"o":-74.20006,"l":["SI"]},{"i":"S16","n":"Huguenot","a":40.53367,"o":-74.19179,"l":["SI"]},{"i":"S17","n":"Annadale","a":40.54046,"o":-74.17822,"l":["SI"]},{"i":"S18","n":"Eltingville","a":40.5446,"o":-74.16457,"l":["SI"]},{"i":"S19","n":"Great Kills","a":40.55123,"o":-74.1514,"l":["SI"]},{"i":"S20","n":"Bay Terrace","a":40.5564,"o":-74.13691,"l":["SI"]},{"i":"S21","n":"Oakwood Heights","a":40.56511,"o":-74.12632,"l":["SI"]},{"i":"S22","n":"New Dorp","a":40.57348,"o":-74.11721,"l":["SI"]},{"i":"S23","n":"Grant City","a":40.57896,"o":-74.1097,"l":["SI"]},{"i":"S24","n":"Jefferson Av","a":40.58359,"o":-74.10334,"l":["SI"]},{"i":"S25","n":"Dongan Hills","a":40.58885,"o":-74.09609,"l":["SI"]},{"i":"S26","n":"Old Town","a":40.59661,"o":-74.08737,"l":["SI"]},{"i":"S27","n":"Grasmere","a":40.60312,"o":-74.08409,"l":["SI"]},{"i":"S28","n":"Clifton","a":40.62132,"o":-74.0714,"l":["SI"]},{"i":"S29","n":"Stapleton","a":40.62792,"o":-74.07516,"l":["SI"]},{"i":"S30","n":"Tompkinsville","a":40.63695,"o":-74.07483,"l":["SI"]},{"i":"S31","n":"St George","a":40.64375,"o":-74.07364,"l":["SI"]}].map(s=>({id:s.i,name:s.n,lat:s.a,lon:s.o,lines:s.l}));
+
+/* ===== constants ===== */
+const LINE_COLORS = {"1":"#EE352E","2":"#EE352E","3":"#EE352E","4":"#00933C","5":"#00933C","6":"#00933C","6X":"#00933C","7":"#B933AD","7X":"#B933AD","A":"#0039A6","C":"#0039A6","E":"#0039A6","B":"#FF6319","D":"#FF6319","F":"#FF6319","M":"#FF6319","G":"#6CBE45","J":"#996633","Z":"#996633","L":"#A7A9AC","N":"#FCCC0A","Q":"#FCCC0A","R":"#FCCC0A","W":"#FCCC0A","S":"#808183","GS":"#808183","FS":"#808183","H":"#808183","SI":"#0076BF"};
+const FEED_FOR = {"1":"nyct%2Fgtfs","2":"nyct%2Fgtfs","3":"nyct%2Fgtfs","4":"nyct%2Fgtfs","5":"nyct%2Fgtfs","6":"nyct%2Fgtfs","GS":"nyct%2Fgtfs","7":"nyct%2Fgtfs-7","A":"nyct%2Fgtfs-ace","C":"nyct%2Fgtfs-ace","E":"nyct%2Fgtfs-ace","H":"nyct%2Fgtfs-ace","FS":"nyct%2Fgtfs-ace","B":"nyct%2Fgtfs-bdfm","D":"nyct%2Fgtfs-bdfm","F":"nyct%2Fgtfs-bdfm","M":"nyct%2Fgtfs-bdfm","G":"nyct%2Fgtfs-g","J":"nyct%2Fgtfs-jz","Z":"nyct%2Fgtfs-jz","L":"nyct%2Fgtfs-l","N":"nyct%2Fgtfs-nqrw","Q":"nyct%2Fgtfs-nqrw","R":"nyct%2Fgtfs-nqrw","W":"nyct%2Fgtfs-nqrw","SI":"nyct%2Fgtfs-si"};
+const MTA = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/";
+const ALERTS_URL = MTA + "camsys%2Fsubway-alerts.json";
+const SEV_CLASS = {"Planned - Suspended":"red","Planned - Part Suspended":"red","Delays":"amber","Expect Delays":"amber","Reduced Service":"amber"};
+const SEV_LABEL = {red:"Suspended", amber:"Delays", blue:"Planned work", green:"Good service"};
+const SEV_RANK = {green:0, blue:1, amber:2, red:3};
+const TZ = "America/New_York";
+const WMO = {0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Fog",51:"Light drizzle",53:"Drizzle",55:"Dense drizzle",56:"Freezing drizzle",57:"Freezing drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",66:"Freezing rain",67:"Freezing rain",71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",80:"Light showers",81:"Showers",82:"Heavy showers",85:"Light snow showers",86:"Snow showers",95:"Thunderstorm",96:"Thunderstorm w/ hail",99:"Thunderstorm w/ hail"};
+const WMO_ICON = {0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌦️",56:"🌧️",57:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",66:"🌧️",67:"🌧️",71:"🌨️",73:"🌨️",75:"🌨️",77:"🌨️",80:"🌧️",81:"🌧️",82:"🌧️",85:"🌨️",86:"🌨️",95:"⛈️",96:"⛈️",99:"⛈️"};
+
+const DEFAULTS = {
+  home:{label:"", lat:null, lon:null},
+  dests:[
+    {name:"", label:"", lat:null, lon:null},
+    {name:"", label:"", lat:null, lon:null},
+    {name:"", label:"", lat:null, lon:null}
+  ],
+  destIndex:0,
+  lang:"en"
+};
+
+/* ===== i18n ===== */
+function t(key, vars){
+  const lang=(typeof S!=="undefined"&&S.lang)||"en";
+  let s=(I18N[lang]&&I18N[lang][key])||I18N.en[key]||key;
+  if(vars) for(const k in vars) s=String(s).split("{"+k+"}").join(vars[k]);
+  return s;
+}
+function wmoText(code){
+  const lang=(typeof S!=="undefined"&&S.lang)||"en";
+  return (WMO_L[lang]&&WMO_L[lang][code])||WMO[code]||"";
+}
+const I18N={
+en:{
+settings_title:"Roam settings",done:"Done",language:"Language",
+home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one leg.",
+leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
+save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
+max_legs:"Maximum 4 legs.",station_ph:"Type station name…",
+to_work:"To Work",to_home:"To Home",your_route:"Your route",alternatives:"Alternatives",
+wind:"Wind",rain:"Rain",home:"home",work:"work",
+walk_to:"Walk ~{min} min from {place} to {station}",
+add_addr:"Add your {place} address in Settings for walk time.",
+no_route:"No route found. Set home & work addresses (tap \u2630), or add route legs manually.",
+sev_suspended:"Suspended",sev_delays:"Delays",sev_planned:"Planned work",sev_good:"Good service",
+cd_min:"in <b>{n} min</b>",cd_now:"<b>Boarding now</b>",nx_min:"Next {line} in <b>{n} min</b>",nx_now:"<b>{line} boarding now</b>",
+no_trains:"No upcoming {line} trains found for this direction.",
+no_feed:"Live arrivals unavailable for the {line} line right now.",
+transfer_at:"Transfer at {station}",your_arrives:"Your {line} arrives at <b>{time}</b>.",
+transfer_wait:"transfer after a {n}-min wait",transfer_now:"transfer now",
+waiting_conn:"Waiting for the next {line} connection…",transfer_to:"Transfer to the {line} line here.",
+arrive:"Arrive {station}",arrive_at:"Arrive <b>{time}</b>",est_arrival:"Estimated arrival <b>{time}</b>",arr_unavailable:"Arrival time unavailable.",leave_by:"Leave by <b>{time}</b> for the {line} at {traintime}",
+station_notices:"Station notices:",
+no_faster:"Disruption detected, but no faster route found right now.",
+all_clear:"All clear on your route.",fastest_opts:"Disruption detected — fastest options:",
+alt_sub:"{total} min total · walk {walk} min to {station}",via:"via {station}",
+faster:"{n} min faster than your route",slower:"{n} min slower than your route",
+tap_timing:"Tap for full timing.",alt_route:"Alternative route",
+opt_gone:"This option is no longer available right now.",back_route:"← Back to my route",
+showing_alt:"Showing alternative detail. Tap “← Back to my route” to return.",
+updated:"Updated {time} ET",
+err_load:"Couldn't load live data. Check your connection and tap Refresh.",
+err_save:"Couldn't save settings: "
+},
+ko:{
+settings_title:"출퇴근 설정",done:"완료",language:"언어",
+home_address:"집 주소",work_address:"직장 주소",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+route_legs:"경로 구간",legs_hint:"타는 열차마다 하나씩 — 환승 없으면 1개만.",
+leg_n:"구간 {n}",board:"탑승",get_off:"하차",remove:"× 삭제",add_leg:"+ 구간 추가",
+save:"저장",saving:"저장 중…",addr_note:"주소는 한 번만 변환되어 이 기기에만 저장됩니다.",walk_time:"도보 시간 (분)",walk_hint:"첫 역까지 걸리는 시간. 비워두면 자동 계산됩니다.",walk_auto:"자동",walk_from_home:"집 → 지하철역",walk_from_work:"회사 → 지하철역",tt_prev:"이전 열차",planned_work:"예정된 공사",tomorrow:"내일",today:"오늘",
+max_legs:"최대 4개 구간.",station_ph:"역 이름 입력…",
+to_work:"출근",to_home:"퇴근",your_route:"내 경로",alternatives:"대체 경로",
+wind:"바람",rain:"강수",home:"집",work:"직장",
+walk_to:"{place}에서 {station}까지 도보 약 {min}분",
+add_addr:"도보 시간을 보려면 설정에서 {place} 주소를 입력하세요.",
+no_route:"경로가 없습니다. ⚙️를 눌러 구간을 추가한 뒤 저장하세요.",
+sev_suspended:"운행 중단",sev_delays:"지연",sev_planned:"계획 공사",sev_good:"정상 운행",
+cd_min:"<b>{n}분 후</b>",cd_now:"<b>지금 탑승</b>",nx_min:"다음 {line} <b>{n}분 후</b>",nx_now:"<b>{line} 지금 탑승</b>",
+no_trains:"이 방향 {line} 열차가 없습니다.",
+no_feed:"{line} 실시간 도착 정보를 가져올 수 없습니다.",
+transfer_at:"{station}에서 환승",your_arrives:"{line} <b>{time}</b> 도착.",
+transfer_wait:"{n}분 대기 후 환승",transfer_now:"바로 환승",
+waiting_conn:"다음 {line} 연결 대기 중…",transfer_to:"여기서 {line}(으)로 갈아타세요.",
+arrive:"{station} 도착",arrive_at:"<b>{time}</b> 도착",est_arrival:"도착 예정 {time}",arr_unavailable:"도착 시간을 알 수 없습니다.",leave_by:"{traintime} {line} 타려면 <b>{time}</b>에 출발",
+station_notices:"역 공지:",
+no_faster:"지연이 감지됐지만 더 빠른 경로가 없습니다.",
+all_clear:"경로에 이상 없습니다.",fastest_opts:"지연 감지 — 가장 빠른 경로:",
+alt_sub:"총 {total}분 · {station}까지 도보 {walk}분",via:"경유 {station}",
+faster:"내 경로보다 {n}분 빠름",slower:"내 경로보다 {n}분 느림",
+tap_timing:"탭하면 전체 시간표.",alt_route:"대체 경로",
+opt_gone:"이 경로는 지금 이용할 수 없습니다.",back_route:"← 내 경로로 돌아가기",
+showing_alt:"대체 경로 상세 보기 중. “← 내 경로로 돌아가기”를 눌러 돌아가세요.",
+updated:"{time} ET 업데이트",
+err_load:"실시간 데이터를 불러오지 못했습니다. 연결을 확인하고 새로고침을 눌러주세요.",
+err_save:"설정을 저장하지 못했습니다: "
+},
+zh:{
+settings_title:"通勤设置",done:"完成",language:"语言",
+home_address:"家庭地址",work_address:"工作地址",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+route_legs:"路线段",legs_hint:"每乘一趟车一段 — 不换乘？只用一段。",
+leg_n:"第 {n} 段",board:"上车",get_off:"下车",remove:"× 删除",add_leg:"+ 添加路段",
+save:"保存",saving:"保存中…",addr_note:"地址仅转换一次，只保存在此设备上。",walk_time:"步行时间（分钟）",walk_hint:"步行到第一站的时间。留空则自动计算。",walk_auto:"自动",walk_from_home:"家 → 地铁站",walk_from_work:"公司 → 地铁站",tt_prev:"上一班",planned_work:"计划施工",tomorrow:"明天",today:"今天",
+max_legs:"最多 4 段。",station_ph:"输入车站名称…",
+to_work:"上班",to_home:"下班",your_route:"我的路线",alternatives:"备选路线",
+wind:"风",rain:"降水",home:"家",work:"公司",
+walk_to:"从{place}步行约 {min} 分钟到{station}",
+add_addr:"请在设置中输入{place}地址以显示步行时间。",
+no_route:"未设置路线。点击⚙️添加路段后保存。",
+sev_suspended:"暂停服务",sev_delays:"延误",sev_planned:"计划施工",sev_good:"正常运营",
+cd_min:"<b>{n} 分钟后</b>",cd_now:"<b>现在上车</b>",nx_min:"下一班 {line} <b>{n} 分钟后</b>",nx_now:"<b>{line} 正在上车</b>",
+no_trains:"该方向暂无 {line} 列车。",
+no_feed:"暂时无法获取 {line} 实时到站信息。",
+transfer_at:"在{station}换乘",your_arrives:"{line}将于 <b>{time}</b> 到达。",
+transfer_wait:"等待 {n} 分钟后换乘",transfer_now:"立即换乘",
+waiting_conn:"等待下一班 {line}…",transfer_to:"请在此换乘 {line}。",
+arrive:"到达{station}",arrive_at:"<b>{time}</b> 到达",est_arrival:"预计到达 <b>{time}</b>",arr_unavailable:"无法获取到达时间。",leave_by:"要在 <b>{time}</b> 出发赶 {traintime} 的 {line}",
+station_notices:"车站通知：",
+no_faster:"检测到延误，但目前没有更快的路线。",
+all_clear:"你的路线一切正常。",fastest_opts:"检测到延误 — 最快的路线：",
+alt_sub:"共 {total} 分钟 · 步行 {walk} 分钟到{station}",via:"经由{station}",
+faster:"比你的路线快 {n} 分钟",slower:"比你的路线慢 {n} 分钟",
+tap_timing:"点击查看完整时刻。",alt_route:"备选路线",
+opt_gone:"该路线目前不可用。",back_route:"← 返回我的路线",
+showing_alt:"正在查看备选路线详情。点击“← 返回我的路线”返回。",
+updated:"{time} ET 更新",
+err_load:"无法加载实时数据。请检查网络连接后点击刷新。",
+err_save:"无法保存设置："
+},
+ja:{
+settings_title:"通勤設定",done:"完了",language:"言語",
+home_address:"自宅住所",work_address:"職場住所",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+route_legs:"経路区間",legs_hint:"乗る電車ごとに1区間 — 乗換なしなら1区間だけ。",
+leg_n:"区間 {n}",board:"乗車",get_off:"下車",remove:"× 削除",add_leg:"+ 区間を追加",
+save:"保存",saving:"保存中…",addr_note:"住所は一度だけ変換され、このデバイスにのみ保存されます。",walk_time:"徒歩時間（分）",walk_hint:"最初の駅までの徒歩時間。空欄で自動計算。",walk_auto:"自動",walk_from_home:"自宅 → 駅",walk_from_work:"職場 → 駅",tt_prev:"前の列車",planned_work:"工事予定",tomorrow:"明日",today:"今日",
+max_legs:"最大4区間。",station_ph:"駅名を入力…",
+to_work:"出勤",to_home:"帰宅",your_route:"マイルート",alternatives:"代替ルート",
+wind:"風",rain:"降水",home:"自宅",work:"職場",
+walk_to:"{place}から{station}まで徒歩約{min}分",
+add_addr:"徒歩時間を表示するには設定で{place}の住所を入力してください。",
+no_route:"ルートが設定されていません。⚙️をタップして区間を追加し保存してください。",
+sev_suspended:"運転見合わせ",sev_delays:"遅延",sev_planned:"工事予定",sev_good:"平常運転",
+cd_min:"<b>{n}分後</b>",cd_now:"<b>今乗車</b>",nx_min:"次の{line} <b>{n}分後</b>",nx_now:"<b>{line} 今乗車中</b>",
+no_trains:"この方向の{line}はありません。",
+no_feed:"{line}のリアルタイム到着情報を取得できません。",
+transfer_at:"{station}で乗換",your_arrives:"{line}は<b>{time}</b>に到着します。",
+transfer_wait:"{n}分待って乗換",transfer_now:"すぐ乗換",
+waiting_conn:"次の{line}を待っています…",transfer_to:"ここで{line}に乗り換えてください。",
+arrive:"{station}到着",arrive_at:"<b>{time}</b> 到着",est_arrival:"到着予定 <b>{time}</b>",arr_unavailable:"到着時刻を取得できません。",leave_by:"{traintime}の{line}に乗るには<b>{time}</b>に出発",
+station_notices:"駅のお知らせ:",
+no_faster:"遅延を検出しましたが、より速いルートがありません。",
+all_clear:"ルートに問題ありません。",fastest_opts:"遅延検出 — 最速ルート:",
+alt_sub:"合計{total}分 · {station}まで徒歩{walk}分",via:"経由 {station}",
+faster:"通常ルートより{n}分速い",slower:"通常ルートより{n}分遅い",
+tap_timing:"タップで詳細時刻。",alt_route:"代替ルート",
+opt_gone:"このルートは現在利用できません。",back_route:"← マイルートに戻る",
+showing_alt:"代替ルート詳細を表示中。「← マイルートに戻る」で戻れます。",
+updated:"{time} ET 更新",
+err_load:"リアルタイムデータを読み込めませんでした。接続を確認して更新してください。",
+err_save:"設定を保存できませんでした:"
+},
+es:{
+settings_title:"Ajustes de viaje",done:"Listo",language:"Idioma",
+home_address:"Dirección de casa",work_address:"Dirección del trabajo",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+route_legs:"Tramos de ruta",legs_hint:"Uno por tren — ¿sin transbordo? Usa solo uno.",
+leg_n:"Tramo {n}",board:"Subir",get_off:"Bajar",remove:"× Eliminar",add_leg:"+ Añadir tramo",
+save:"Guardar",saving:"Guardando…",addr_note:"Las direcciones se geocodifican una vez y se guardan solo en este dispositivo.",walk_time:"Tiempo a pie (min)",walk_hint:"Cuánto tardas a pie hasta la primera estación. Déjalo en blanco para cálculo automático.",walk_auto:"Auto",walk_from_home:"Casa → estación",walk_from_work:"Trabajo → estación",tt_prev:"Anterior",planned_work:"Obra planificada",tomorrow:"Mañana",today:"Hoy",
+max_legs:"Máximo 4 tramos.",station_ph:"Escribe el nombre de la estación…",
+to_work:"Al trabajo",to_home:"A casa",your_route:"Tu ruta",alternatives:"Alternativas",
+wind:"Viento",rain:"Lluvia",home:"casa",work:"trabajo",
+walk_to:"Camina ~{min} min desde {place} hasta {station}",
+add_addr:"Añade tu dirección de {place} en Ajustes para ver el tiempo a pie.",
+no_route:"Sin ruta. Toca el engranaje, añade al menos un tramo y pulsa Guardar.",
+sev_suspended:"Suspendido",sev_delays:"Retrasos",sev_planned:"Obra programada",sev_good:"Servicio normal",
+cd_min:"en <b>{n} min</b>",cd_now:"<b>Abordando ahora</b>",nx_min:"Próximo {line} en <b>{n} min</b>",nx_now:"<b>{line} abordando ahora</b>",
+no_trains:"No hay trenes {line} próximos en esta dirección.",
+no_feed:"Llegadas en vivo no disponibles para la línea {line}.",
+transfer_at:"Transbordo en {station}",your_arrives:"Tu {line} llega a las <b>{time}</b>.",
+transfer_wait:"transbordo tras {n} min de espera",transfer_now:"transbordo ahora",
+waiting_conn:"Esperando la próxima conexión {line}…",transfer_to:"Transborda a la línea {line} aquí.",
+arrive:"Llegada a {station}",arrive_at:"Llegada <b>{time}</b>",est_arrival:"Llegada estimada <b>{time}</b>",arr_unavailable:"Hora de llegada no disponible.",leave_by:"Sal a las <b>{time}</b> para el {line} de las {traintime}",
+station_notices:"Avisos de estación:",
+no_faster:"Retraso detectado, pero no hay ruta más rápida ahora.",
+all_clear:"Todo despejado en tu ruta.",fastest_opts:"Retraso detectado — opciones más rápidas:",
+alt_sub:"{total} min en total · {walk} min a pie hasta {station}",via:"vía {station}",
+faster:"{n} min más rápido que tu ruta",slower:"{n} min más lento que tu ruta",
+tap_timing:"Toca para ver horarios.",alt_route:"Ruta alternativa",
+opt_gone:"Esta opción ya no está disponible.",back_route:"← Volver a mi ruta",
+showing_alt:"Viendo detalle alternativo. Toca “← Volver a mi ruta” para volver.",
+updated:"Actualizado {time} ET",
+err_load:"No se pudieron cargar los datos en vivo. Revisa tu conexión y pulsa Actualizar.",
+err_save:"No se pudo guardar: "
+},
+fr:{
+settings_title:"Réglages du trajet",done:"OK",language:"Langue",
+home_address:"Adresse du domicile",work_address:"Adresse du travail",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
+route_legs:"Segments du trajet",legs_hint:"Un par train — sans correspondance ? Un seul suffit.",
+leg_n:"Segment {n}",board:"Embarquement",get_off:"Descente",remove:"× Supprimer",add_leg:"+ Ajouter un segment",
+save:"Enregistrer",saving:"Enregistrement…",addr_note:"Les adresses sont géocodées une fois et stockées uniquement sur cet appareil.",walk_time:"Temps de marche (min)",walk_hint:"Temps de marche jusqu'à la première station. Laisser vide pour calcul auto.",walk_auto:"Auto",walk_from_home:"Domicile → station",walk_from_work:"Travail → station",tt_prev:"Précédent",planned_work:"Travaux prévus",tomorrow:"Demain",today:"Aujourd'hui",
+max_legs:"4 segments maximum.",station_ph:"Nom de la station…",
+to_work:"Aller au travail",to_home:"Rentrer",your_route:"Votre trajet",alternatives:"Alternatives",
+wind:"Vent",rain:"Pluie",home:"domicile",work:"travail",
+walk_to:"~{min} min à pied depuis {place} jusqu'à {station}",
+add_addr:"Ajoutez votre adresse ({place}) dans Réglages pour le temps de marche.",
+no_route:"Aucun trajet. Touchez l'engrenage, ajoutez un segment puis Enregistrer.",
+sev_suspended:"Suspendu",sev_delays:"Retards",sev_planned:"Travaux prévus",sev_good:"Service normal",
+cd_min:"dans <b>{n} min</b>",cd_now:"<b>Embarquement</b>",nx_min:"Prochain {line} dans <b>{n} min</b>",nx_now:"<b>{line} embarquement</b>",
+no_trains:"Aucun train {line} prochain dans cette direction.",
+no_feed:"Arrivées en direct indisponibles pour la ligne {line}.",
+transfer_at:"Correspondance à {station}",your_arrives:"Votre {line} arrive à <b>{time}</b>.",
+transfer_wait:"correspondance après {n} min d'attente",transfer_now:"correspondance immédiate",
+waiting_conn:"En attente de la prochaine correspondance {line}…",transfer_to:"Changez pour la ligne {line} ici.",
+arrive:"Arrivée à {station}",arrive_at:"Arrivée <b>{time}</b>",est_arrival:"Arrivée estimée <b>{time}</b>",arr_unavailable:"Heure d'arrivée indisponible.",leave_by:"Partez à <b>{time}</b> pour le {line} de {traintime}",
+station_notices:"Infos stations :",
+no_faster:"Perturbation détectée, mais aucun itinéraire plus rapide.",
+all_clear:"Rien à signaler sur votre trajet.",fastest_opts:"Perturbation — itinéraires les plus rapides :",
+alt_sub:"{total} min au total · {walk} min à pied jusqu'à {station}",via:"via {station}",
+faster:"{n} min plus rapide que votre trajet",slower:"{n} min plus lent que votre trajet",
+tap_timing:"Toucher pour les horaires.",alt_route:"Itinéraire alternatif",
+opt_gone:"Cette option n'est plus disponible.",back_route:"← Retour à mon trajet",
+showing_alt:"Détail alternatif affiché. Touchez “← Retour à mon trajet” pour revenir.",
+updated:"Mis à jour {time} ET",
+err_load:"Données en direct indisponibles. Vérifiez la connexion puis actualisez.",
+err_save:"Enregistrement impossible : "
+}
+};
+
+function sevLabel(cls){ return cls==="red"?t("sev_suspended"):cls==="amber"?t("sev_delays"):cls==="blue"?t("sev_planned"):t("sev_good"); }
+function cdHtml(sec){ const m=Math.round((sec-Date.now()/1000)/60); return m<=0?t("cd_now"):t("cd_min",{n:m}); }
+function nxHtml(line,sec){ const m=Math.round((sec-Date.now()/1000)/60); return m<=0?t("nx_now",{line:line}):t("nx_min",{line:line,n:m}); }
+
+/* weather condition names per language (WMO codes) */
+const WMO_L={
+ko:{0:"맑음",1:"대체로 맑음",2:"부분적 흐림",3:"흐림",45:"안개",48:"안개",51:"약한 이슬비",53:"이슬비",55:"짙은 이슬비",56:"언 이슬비",57:"언 이슬비",61:"약한 비",63:"비",65:"강한 비",66:"언 비",67:"언 비",71:"약한 눈",73:"눈",75:"강한 눈",77:"싸락눈",80:"약한 소나기",81:"소나기",82:"강한 소나기",85:"약한 눈 소나기",86:"눈 소나기",95:"천둥번개",96:"우박 동반 천둥번개",99:"우박 동반 천둥번개"},
+zh:{0:"晴",1:"大致晴朗",2:"多云",3:"阴",45:"雾",48:"雾",51:"毛毛雨",53:"毛毛雨",55:"浓毛毛雨",56:"冻毛毛雨",57:"冻毛毛雨",61:"小雨",63:"雨",65:"大雨",66:"冻雨",67:"冻雨",71:"小雪",73:"雪",75:"大雪",77:"米雪",80:"小阵雨",81:"阵雨",82:"大阵雨",85:"小阵雪",86:"阵雪",95:"雷暴",96:"雷暴伴冰雹",99:"雷暴伴冰雹"},
+ja:{0:"晴れ",1:"概ね晴れ",2:"曇り時々晴れ",3:"曇り",45:"霧",48:"霧",51:"弱い霧雨",53:"霧雨",55:"濃い霧雨",56:"着氷性の霧雨",57:"着氷性の霧雨",61:"弱い雨",63:"雨",65:"強い雨",66:"着氷性の雨",67:"着氷性の雨",71:"弱い雪",73:"雪",75:"強い雪",77:"あられ",80:"弱いにわか雨",81:"にわか雨",82:"強いにわか雨",85:"弱いにわか雪",86:"にわか雪",95:"雷雨",96:"雹を伴う雷雨",99:"雹を伴う雷雨"},
+es:{0:"Despejado",1:"Mayormente despejado",2:"Parcialmente nublado",3:"Cubierto",45:"Niebla",48:"Niebla",51:"Llovizna ligera",53:"Llovizna",55:"Llovizna densa",56:"Llovizna helada",57:"Llovizna helada",61:"Lluvia ligera",63:"Lluvia",65:"Lluvia intensa",66:"Lluvia helada",67:"Lluvia helada",71:"Nieve ligera",73:"Nieve",75:"Nieve intensa",77:"Granos de nieve",80:"Chubascos ligeros",81:"Chubascos",82:"Chubascos intensos",85:"Chubascos de nieve ligeros",86:"Chubascos de nieve",95:"Tormenta",96:"Tormenta con granizo",99:"Tormenta con granizo"},
+fr:{0:"Dégagé",1:"Plutôt dégagé",2:"Partiellement nuageux",3:"Couvert",45:"Brouillard",48:"Brouillard",51:"Bruine légère",53:"Bruine",55:"Bruine dense",56:"Bruine verglaçante",57:"Bruine verglaçante",61:"Pluie légère",63:"Pluie",65:"Forte pluie",66:"Pluie verglaçante",67:"Pluie verglaçante",71:"Neige légère",73:"Neige",75:"Forte neige",77:"Grains de neige",80:"Averses légères",81:"Averses",82:"Fortes averses",85:"Averses de neige légères",86:"Averses de neige",95:"Orage",96:"Orage avec grêle",99:"Orage avec grêle"}
+};
+
+/* ===== state ===== */
+const LS_KEY = "roam_v1";
+let S = loadSettings();
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const p = JSON.parse(raw);
+      const d = JSON.parse(JSON.stringify(DEFAULTS));
+      for(const k of Object.keys(d)){ if(p[k]!==undefined) d[k]=p[k]; }
+      if(!Array.isArray(d.dests)||d.dests.length!==3){
+        d.dests=JSON.parse(JSON.stringify(DEFAULTS.dests));
+      }
+      if(typeof d.destIndex!=="number"||d.destIndex<0||d.destIndex>2) d.destIndex=0;
+      d.lang="en";
+      return d;
+    }
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
+function saveSettings(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+
+const ST_BY_ID = {};
+STATIONS.forEach(s=>{ ST_BY_ID[s.id]=s; });
+
+/* ===== utils ===== */
+const $ = id=>document.getElementById(id);
+const num = v=>v==null?0:Number(v);
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function fmtClockShort(sec){ return fmtClock(sec).replace(/\s?[AP]M$/i,""); }
+function fmtClock(sec){ const d=new Date(sec*1000); const l=(typeof S!=="undefined"&&S.lang)||"en"; if(l==="ko"||l==="zh"||l==="ja"||l==="fr"){ return d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:TZ}); } return d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:TZ}); }
+function fmtHM(){ return new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",second:"2-digit",timeZone:TZ}); }
+function tempBoth(f){ return Math.round(f)+"°F ("+Math.round((f-32)*5/9)+"°C)"; }
+function havKm(a,b,c,d){
+  const R=6371, t=Math.PI/180;
+  const h=Math.sin((c-a)*t/2)**2 + Math.cos(a*t)*Math.cos(c*t)*Math.sin((d-b)*t/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function lineBadge(line){
+  const col=LINE_COLORS[line]||"#666";
+  const dark=(line==="N"||line==="Q"||line==="R"||line==="W"||line==="L");
+  return '<span class="badge" style="background:'+col+';color:'+(dark?"#111":"#fff")+'">'+esc(line)+'</span>';
+}
+function stationName(id){ const s=ST_BY_ID[id]; return s?s.name:id; }
+function stopSet(stationId){
+  const set=new Set();
+  if(!ST_BY_ID[stationId]) return set;
+  set.add(stationId);
+  set.add(stationId+"N"); set.add(stationId+"S");
+  set.add(stationId);
+  return set;
+}
+function showErr(msg){ const e=$("err"); e.style.display=msg?"block":"none"; e.textContent=msg||""; }
+
+/* ===== geocode (Nominatim, cached) ===== */
+const GEO_KEY="brooklyn_commute_geo_v1";
+function geoGet(k){
+  try{ const c=JSON.parse(localStorage.getItem(GEO_KEY)||"{}"); return c[k]||null; }catch(e){ return null; }
+}
+function geoPut(k,v){
+  try{ const c=JSON.parse(localStorage.getItem(GEO_KEY)||"{}"); c[k]=v; localStorage.setItem(GEO_KEY,JSON.stringify(c)); }catch(e){}
+}
+async function geocode(label){
+  const key=label.trim().toLowerCase();
+  if(!key) return null;
+  const hit=geoGet(key);
+  if(hit) return hit;
+  const url="https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(label);
+  const r=await fetch(url,{headers:{"Accept":"application/json"}});
+  const j=await r.json();
+  if(j&&j[0]){
+    const v={lat:parseFloat(j[0].lat), lon:parseFloat(j[0].lon)};
+    geoPut(key,v);
+    return v;
+  }
+  return null;
+}
+
+/* ===== walk time (OSRM foot, haversine fallback) ===== */
+async function walkMinutes(aLat,aLon,bLat,bLon){
+  if(aLat==null||aLon==null||bLat==null||bLon==null) return null;
+  try{
+    const u="https://router.project-osrm.org/route/v1/foot/"+aLon+","+aLat+";"+bLon+","+bLat+"?overview=false";
+    const r=await fetch(u);
+    const j=await r.json();
+    // NOTE: the public OSRM demo server sometimes returns car-like durations
+    // for the foot profile, so derive walk time from route distance instead.
+    if(j.routes&&j.routes[0]&&j.routes[0].distance) return (j.routes[0].distance/1000)/4.0*60;
+  }catch(e){}
+  return havKm(aLat,aLon,bLat,bLon)*1.3/4.0*60;
+}
+
+/* ===== weather (Open-Meteo) ===== */
+async function fetchWeather(lat,lon){
+  const u="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
+    "&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max"+
+    "&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York&forecast_days=1";
+  const r=await fetch(u);
+  return await r.json();
+}
+async function fetchNwsAlerts(lat,lon){
+  const u="https://api.weather.gov/alerts/active?point="+lat+","+lon+"&status=actual&message_type=alert,update";
+  const r=await fetch(u,{headers:{Accept:"application/geo+json"}});
+  const j=await r.json();
+  return (j.features||[]).map(f=>{
+    const p=f.properties||{};
+    return {event:p.event||"Alert",headline:p.headline||"",desc:p.description||""};
+  });
+}
+
+/* ===== MTA service status (alerts JSON) ===== */
+let lineStatus={}, stationNotes=[], plannedRaw=[];
+async function fetchStatus(){
+  const r=await fetch(ALERTS_URL);
+  const j=await r.json();
+  const now=Math.floor(Date.now()/1000);
+  lineStatus={}; stationNotes=[]; plannedRaw=[];
+  const items=[];
+  for(const e of (j.entity||[])){
+    const a=e.alert||{};
+    let active=false;
+    for(const ap of (a.active_period||[])){
+      const s=num(ap.start), en=num(ap.end)||1e15;
+      if(s<=now&&now<=en){ active=true; break; }
+    }
+    if(!active){
+      // future planned notice: take the soonest upcoming period
+      let ns=null;
+      for(const ap of (a.active_period||[])){
+        const s=num(ap.start);
+        if(s>now&&(ns==null||s<ns)) ns=s;
+      }
+      if(ns!=null&&ns<=now+7*86400){
+        let en=null;
+        for(const ap of (a.active_period||[])){ if(num(ap.start)===ns){ en=num(ap.end)||null; break; } }
+        const mtype=((a["transit_realtime.mercury_alert"])||{}).alert_type||"";
+        const lines=[];
+        for(const ie of (a.informed_entity||[])){
+          if(ie.route_id&&!ie.stop_id&&lines.indexOf(ie.route_id)<0) lines.push(ie.route_id);
+        }
+        if(lines.length){
+          const ht=((a.header_text||{}).translation||[]).find(t=>t.language==="en");
+          const dt=((a.description_text||{}).translation||[]).find(t=>t.language==="en");
+          plannedRaw.push({lines:lines,title:ht?ht.text:"Service change",desc:dt?dt.text:"",
+            start:ns,end:en,cls:SEV_CLASS[mtype]||"blue"});
+        }
+      }
+      continue;
+    }
+    items.push(a);
+  }
+  for(const a of items){
+    const mtype=((a["transit_realtime.mercury_alert"])||{}).alert_type||"";
+    const cls=SEV_CLASS[mtype]||"blue";
+    const tr=((a.header_text||{}).translation||[]).find(t=>t.language==="en");
+    const title=tr?tr.text:"Service change";
+    for(const ie of (a.informed_entity||[])){
+      if(ie.route_id&&!ie.stop_id){
+        const cur=lineStatus[ie.route_id];
+        if(!cur||SEV_RANK[cls]>SEV_RANK[cur.cls]) lineStatus[ie.route_id]={cls:cls,text:title};
+      }
+    }
+  }
+  const myStops=new Set();
+  ["s1","s2","s3","s4"].forEach(k=>{ stopSet(S[k].stationId).forEach(x=>myStops.add(x)); });
+  for(const a of items){
+    const tr=((a.header_text||{}).translation||[]).find(t=>t.language==="en");
+    const title=tr?tr.text:"Service change";
+    for(const ie of (a.informed_entity||[])){
+      if(ie.stop_id){
+        const sid=String(ie.stop_id).replace(/[NS]$/,"");
+        if(myStops.has(sid)||myStops.has(ie.stop_id)){ stationNotes.push(title); break; }
+      }
+    }
+  }
+}
+function statusOf(line){
+  return lineStatus[line]||{cls:"green",text:""};
+}
+
+
+/* ===== MTA arrivals (GTFS-RT protobuf, zero-dependency decoder) =====
+   Minimal wire-format reader for the fields this app needs:
+   FeedMessage{2:entity[]} > FeedEntity{3:trip_update}   > TripUpdate{1:trip{TripDescriptor{5:route_id}}, 2:stop_time_update[]}
+   > StopTimeUpdate{4:stop_id, 2:arrival{StopTimeEvent{2:time}}} */
+const TD8=new TextDecoder();
+function pv(buf,pos){let v=0,m=1,b;do{b=buf[pos++];v+=(b&0x7F)*m;m*=128;}while(b&0x80);return [v,pos];}
+function pm(buf,start,end){
+  const f={};let pos=start;
+  while(pos<end){
+    let k;[k,pos]=pv(buf,pos);
+    const n=k>>>3,w=k&7,arr=(f[n]||(f[n]=[]));
+    if(w===0){let v;[v,pos]=pv(buf,pos);arr.push(v);}
+    else if(w===2){let l;[l,pos]=pv(buf,pos);arr.push(buf.subarray(pos,pos+l));pos+=l;}
+    else if(w===5){arr.push(0);pos+=4;}
+    else if(w===1){arr.push(0);pos+=8;}
+    else throw new Error("proto wire "+w);
+  }
+  return f;
+}
+const bs2s=b=>(b instanceof Uint8Array)?TD8.decode(b):"";
+function decodeFeed(u8){
+  const top=pm(u8,0,u8.length),out=[];
+  for(const eb of (top[2]||[])){
+    const e=pm(eb,0,eb.length),tb=(e[3]||[])[0];
+    if(!tb)continue;
+    const tu=pm(tb,0,tb.length),trb=(tu[1]||[])[0];
+    const tr=trb?pm(trb,0,trb.length):{};
+    const stops=[];
+    for(const sb of (tu[2]||[])){
+      const s=pm(sb,0,sb.length),ab=(s[2]||[])[0];
+      const ar=ab?pm(ab,0,ab.length):{};
+      stops.push({stop_id:bs2s((s[4]||[])[0]),arrival:{time:((ar[2]||[])[0])||0}});
+    }
+    out.push({trip_update:{trip:{route_id:bs2s((tr[5]||[])[0])},stop_time_update:stops}});
+  }
+  return out;
+}
+async function fetchFeed(feedPath){
+  const r=await fetch(MTA+feedPath);
+  if(!r.ok) throw new Error("feed "+feedPath+" HTTP "+r.status);
+  const buf=await r.arrayBuffer();
+  return decodeFeed(new Uint8Array(buf));
+}
+function findTrips(feed,line,fromId,toId,after,strict){
+  const from=stopSet(fromId), to=stopSet(toId);
+  const out=[];
+  const cutoff = strict ? after : after-120;
+  for(const e of feed){
+    const tu=e.trip_update;
+    if(!tu||!tu.trip) continue;
+    if((tu.trip.route_id||"")!==line) continue;
+    const stus=tu.stop_time_update||[];
+    let bi=-1;
+    for(let i=0;i<stus.length;i++){
+      const raw=stus[i].stop_id||"";
+      if(from.has(raw)||from.has(raw.replace(/[NS]$/,""))){ bi=i; break; }
+    }
+    if(bi<0) continue;
+    let ai=-1;
+    for(let i=bi+1;i<stus.length;i++){
+      const raw=stus[i].stop_id||"";
+      if(to.has(raw)||to.has(raw.replace(/[NS]$/,""))){ ai=i; break; }
+    }
+    if(ai<0) continue;
+    const bt=num(stus[bi].arrival&&stus[bi].arrival.time)||num(stus[bi].departure&&stus[bi].departure.time);
+    const at=num(stus[ai].arrival&&stus[ai].arrival.time)||num(stus[ai].departure&&stus[ai].departure.time);
+    if(!bt||bt<cutoff) continue;
+    out.push({bt:bt, at:at||0});
+  }
+  out.sort((x,y)=>x.bt-y.bt);
+  return out;
+}
+
+/* ===== route model ===== */
+// Auto-route: find best subway route when user hasn't specified legs
+// Uses home/work coordinates + station geography. Prefers direct lines,
+// otherwise 1 transfer via precomputed close station pairs.
+const LINE_STATIONS={};
+STATIONS.forEach(s=>{ (s.lines||[]).forEach(l=>{ (LINE_STATIONS[l]=LINE_STATIONS[l]||[]).push(s); }); });
+// Precompute transfer pairs: stations on different lines within 600m
+const XFER_PAIRS=[];
+for(let i=0;i<STATIONS.length;i++){
+  for(let j=i+1;j<STATIONS.length;j++){
+    const a=STATIONS[i], c=STATIONS[j];
+    if(a.lines.some(l=>c.lines.includes(l))) continue;
+    const d=havKm(a.lat,a.lon,c.lat,c.lon);
+    if(d<=0.6) XFER_PAIRS.push({a:a, b:c, d:d});
+  }
+}
+// Index: line -> transfer pairs involving that line
+const LINE_XFER_IDX={};
+XFER_PAIRS.forEach(xp=>{
+  const add=(s,other)=>{
+    (s.lines||[]).forEach(l=>{
+      (LINE_XFER_IDX[l]=LINE_XFER_IDX[l]||[]).push({from:s, to:other, d:xp.d});
+    });
+  };
+  add(xp.a, xp.b); add(xp.b, xp.a);
+});
+
+function autoLegs(){
+  const h=S.home, w=(S.dests&&S.dests[S.destIndex])||{};
+  if(h.lat==null||h.lon==null||w.lat==null||w.lon==null) return null;
+  if(havKm(h.lat,h.lon,w.lat,w.lon)<0.5) return null;
+  const nearH=STATIONS.map(s=>({s:s, d:havKm(h.lat,h.lon,s.lat,s.lon)}))
+    .filter(x=>x.d<=1.2).sort((a,b)=>a.d-b.d);
+  const nearW=STATIONS.map(s=>({s:s, d:havKm(w.lat,w.lon,s.lat,s.lon)}))
+    .filter(x=>x.d<=1.2).sort((a,b)=>a.d-b.d);
+  if(!nearH.length||!nearW.length) return null;
+  const WALK=12, RIDE=2, XFER_PEN=5;
+  let best=null;
+  const consider=(score, legs)=>{ if(!best||score<best.score) best={score:score, legs:legs}; };
+  for(const hn of nearH){
+    for(const wn of nearW){
+      const H=hn.s, W=wn.s;
+      if(H.id===W.id) continue;
+      const shared=(H.lines||[]).filter(l=>(W.lines||[]).includes(l));
+      for(const line of shared){
+        const rideKm=havKm(H.lat,H.lon,W.lat,W.lon);
+        consider(hn.d*WALK + rideKm*RIDE + wn.d*WALK,
+          [{line:line, from:H.id, to:W.id, kind:"ride", auto:true}]);
+      }
+      for(const lh of (H.lines||[])){
+        for(const lw of (W.lines||[])){
+          if(lh===lw) continue;
+          for(const xp of XFER_PAIRS){
+            let s1=null, s2=null;
+            if(xp.a.lines.includes(lh)&&xp.b.lines.includes(lw)){ s1=xp.a; s2=xp.b; }
+            else if(xp.b.lines.includes(lh)&&xp.a.lines.includes(lw)){ s1=xp.b; s2=xp.a; }
+            else continue;
+            const d1=havKm(H.lat,H.lon,s1.lat,s1.lon);
+            const d2=havKm(s2.lat,s2.lon,W.lat,W.lon);
+            const direct=havKm(H.lat,H.lon,W.lat,W.lon);
+            if(d1+d2>direct*2.5+2) continue;
+            // s1 must be different from H unless H is the transfer itself
+            consider(hn.d*WALK + d1*RIDE + xp.d*WALK + XFER_PEN + d2*RIDE + wn.d*WALK,
+              [{line:lh, from:H.id, to:s1.id, kind:"ride", auto:true},
+               {line:lw, from:s2.id, to:W.id, kind:"ride", auto:true}]);
+          }
+        }
+      }
+      // 2 transfers: H (lh1) -> s1 -> s2 (lm) -> s3 -> s4 -> W (lw2)
+      for(const lh1 of (H.lines||[])){
+        for(const lw2 of (W.lines||[])){
+          if(lh1===lw2) continue;
+          const p1cands=LINE_XFER_IDX[lh1]||[];
+          const midLines=[...new Set(p1cands.flatMap(x=>x.to.lines||[]))]
+            .filter(lm=>lm!==lh1&&lm!==lw2);
+          for(const lm of midLines){
+            const p1list=p1cands.filter(x=>(x.to.lines||[]).includes(lm))
+              .sort((a,b2)=>havKm(H.lat,H.lon,a.from.lat,a.from.lon)-havKm(H.lat,H.lon,b2.from.lat,b2.from.lon))
+              .slice(0,5);
+            const p2list=(LINE_XFER_IDX[lm]||[]).filter(x=>(x.to.lines||[]).includes(lw2))
+              .sort((a,b2)=>havKm(a.to.lat,a.to.lon,W.lat,W.lon)-havKm(b2.to.lat,b2.to.lon,W.lat,W.lon))
+              .slice(0,5);
+            for(const p1 of p1list){
+              for(const p2 of p2list){
+                const s1=p1.from, s2=p1.to, s3=p2.from, s4=p2.to;
+                const d1=havKm(H.lat,H.lon,s1.lat,s1.lon);
+                const dm=havKm(s2.lat,s2.lon,s3.lat,s3.lon);
+                const d2=havKm(s4.lat,s4.lon,W.lat,W.lon);
+                const direct=havKm(H.lat,H.lon,W.lat,W.lon);
+                if(d1+dm+d2>direct*3+3) continue;
+                consider(hn.d*WALK + d1*RIDE + p1.d*WALK + XFER_PEN + dm*RIDE + p2.d*WALK + XFER_PEN + d2*RIDE + wn.d*WALK,
+                  [{line:lh1, from:H.id, to:s1.id, kind:"ride", auto:true},
+                   {line:lm, from:s2.id, to:s3.id, kind:"ride", auto:true},
+                   {line:lw2, from:s4.id, to:W.id, kind:"ride", auto:true}]);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return best?best.legs:null;
+}
+
+function getLegs(){
+  const auto=autoLegs();
+  return auto||[];
+}
+function originInfo(){
+  return S.home;
+}
+function destInfo(){
+  return (S.dests&&S.dests[S.destIndex])||{};
+}
+
+const feedCache={};
+async function fetchFeedCached(path){
+  const c=feedCache[path];
+  if(c&&Date.now()-c.ts<45000) return c.feed;
+  const feed=await fetchFeed(path);
+  feedCache[path]={ts:Date.now(), feed:feed};
+  return feed;
+}
+async function fetchFeeds(lines){
+  const need=[...new Set(lines.map(l=>FEED_FOR[l]).filter(Boolean))];
+  const feeds={};
+  await Promise.all(need.map(async f=>{
+    try{ feeds[f]=await fetchFeedCached(f); }catch(e){ feeds[f]=null; }
+  }));
+  return feeds;
+}
+
+async function computeRoute(legs, startAfter){
+  const feeds=await fetchFeeds(legs.map(l=>l.line));
+  const now=Math.floor(Date.now()/1000);
+  const out=[];
+  let after=(startAfter!=null?startAfter:now-60), strict=(startAfter!=null);
+  for(const leg of legs){
+    const feed=feeds[FEED_FOR[leg.line]];
+    let trips=feed?findTrips(feed,leg.line,leg.from,leg.to,after,strict):[];
+    const ts=trips.slice(0,5);
+    const t=ts.length?ts[0]:null;
+    out.push({leg:leg, trip:t, trips:ts, feedOk:!!feed});
+    if(t&&t.at){ after=t.at; strict=true; }
+  }
+  return out;
+}
+
+function hasDisruption(legResults){
+  return legResults.some(r=>{ const st=statusOf(r.leg.line); return st.cls==="red"||st.cls==="amber"; });
+}
+
+/* Fastest-route recommendations when delayed: evaluate nearby stations x lines,
+   compute real ETAs from live departures (direct to destination, or rejoin the
+   remaining route), and return the top 2 by arrival time. */
+async function findFastRoutes(legResults){
+  const o=originInfo();
+  if(o.lat==null||o.lon==null) return [];
+  const legs=getLegs();
+  if(!legs.length) return [];
+  const sameNameIds=name=>[...new Set(STATIONS.filter(s=>s.name===name).map(s=>s.id))].slice(0,3);
+  const destIds=sameNameIds(stationName(legs[legs.length-1].to));
+  const normalSig=legs.map(l=>l.line+":"+l.from+">"+l.to).join("|");
+  // rejoin the remaining route only if all of it is running fine
+  const tail=legs.slice(1);
+  const tailGreen=tail.length>0&&tail.every(l=>statusOf(l.line).cls==="green");
+  const rjIds=tailGreen?sameNameIds(stationName(tail[0].from)):[];
+  const cands=[];
+  for(const s of STATIONS){
+    const d=havKm(o.lat,o.lon,s.lat,s.lon);
+    if(d>1.8||d<0.05) continue;
+    const good=s.lines.filter(l=>statusOf(l).cls==="green");
+    if(!good.length) continue;
+    cands.push({s:s, d:d, lines:good.slice(0,2)});
+  }
+  cands.sort((a,b)=>a.d-b.d);
+  const short=cands.slice(0,8);
+  const allLines=[...new Set(short.flatMap(c=>c.lines).concat(legs.map(l=>l.line)))];
+  const feeds=await fetchFeeds(allLines);
+  const now=Math.floor(Date.now()/1000);
+  const options=[], seen=new Set();
+  async function evalLegs(legList, after){
+    const res=await computeRoute(legList, after);
+    const last=res[res.length-1];
+    if(last&&last.trip&&last.trip.at&&res.every(r=>r.trip)) return last.trip.at;
+    return null;
+  }
+  for(const c of short){
+    const walkMin=Math.max(1,Math.round(c.d/4.5*60));
+    const after=now+walkMin*60;
+    for(const line of c.lines){
+      if(!feeds[FEED_FOR[line]]) continue;
+      // (a) direct to destination (any station with the same name)
+      for(const dId of destIds){
+        const ll=[{line:line, from:c.s.id, to:dId, kind:"ride"}];
+        const sig=ll.map(l=>l.line+":"+l.from+">"+l.to).join("|");
+        if(sig===normalSig||seen.has(sig)) continue;
+        seen.add(sig);
+        const arr=await evalLegs(ll, after);
+        if(arr) options.push({legs:ll, walkMin:walkMin, arrivalSec:arr});
+      }
+      // (b) ride to the rejoin point, then continue the rest of the route
+      if(tailGreen){
+        for(const rId of rjIds){
+          if(rId===c.s.id) continue;
+          const tailAdj=tail.map((l,i)=>i===0?{line:l.line,from:rId,to:l.to,kind:"ride"}:l);
+          const ll=[{line:line, from:c.s.id, to:rId, kind:"ride"}, ...tailAdj];
+          const sig=ll.map(l=>l.line+":"+l.from+">"+l.to).join("|");
+          if(sig===normalSig||seen.has(sig)) continue;
+          seen.add(sig);
+          const arr=await evalLegs(ll, after);
+          if(arr) options.push({legs:ll, walkMin:walkMin, arrivalSec:arr});
+        }
+      }
+    }
+  }
+  // one recommendation per boarding station (keep the earliest), then top 2
+  const byStation={};
+  for(const op of options){
+    const k=op.legs[0].from;
+    if(!byStation[k]||op.arrivalSec<byStation[k].arrivalSec) byStation[k]=op;
+  }
+  const deduped=Object.values(byStation);
+  deduped.sort((a,b)=>a.arrivalSec-b.arrivalSec);
+  return deduped.slice(0,2);
+}
+
+
+/* ===== render ===== */
+function dotCls(cls){ return cls==="green"?"green":cls; }
+const wxState={open:false};
+function renderWeather(w, alerts){
+  alerts=alerts||[];
+  try{
+    const cur=w.current, daily=w.daily, code=cur.weather_code;
+    const strip=$("wx-strip");
+    let h='<span class="wx-icon">'+(WMO_ICON[code]||"")+'</span>'+
+      '<b>'+tempBoth(cur.temperature_2m)+'</b> '+esc(wmoText(code));
+    if(alerts.length){
+      h+=' <span class="wx-abadge">⚠️ '+esc(alerts[0].event)+(alerts.length>1?" +"+(alerts.length-1):"")+'</span>';
+    }
+    h+=' <span class="chev-wx">'+(wxState.open?"⌄":"›")+'</span>';
+    strip.innerHTML=h;
+    strip.style.cursor="pointer";
+    let d=$("wx-detail");
+    if(!d){
+      d=document.createElement("div");
+      d.id="wx-detail";
+      d.className="wx-detail";
+      strip.parentNode.appendChild(d);
+    }
+    const hi=Math.round(daily.temperature_2m_max[0])+"°", lo=Math.round(daily.temperature_2m_min[0])+"°";
+    const wind=cur.wind_speed_10m!=null?Math.round(cur.wind_speed_10m)+" mph":"—";
+    const rain=daily.precipitation_probability_max&&daily.precipitation_probability_max[0]!=null?daily.precipitation_probability_max[0]+"%":"—";
+    let dh='<span style="color:var(--muted)">H '+hi+' L '+lo+' · 💨 '+wind+' · 🌧️ '+rain+'</span>';
+    for(const al of alerts){
+      dh+='<div class="wx-alert"><b>⚠️ '+esc(al.event)+'</b>'
+        +(al.headline?'<div class="wx-ahead">'+esc(al.headline)+'</div>':"")
+        +(al.desc?'<div class="wx-adesc">'+esc(al.desc.slice(0,400))+'</div>':"")
+        +'</div>';
+    }
+    d.innerHTML=dh;
+    d.style.display=wxState.open?"block":"none";
+    strip.onclick=()=>{ wxState.open=!wxState.open; renderWeather(w, alerts); };
+  }catch(e){
+    $("wx-strip").textContent="—";
+  }
+}
+// expandable timetable: previous train + next 2 trains on card tap
+const expandedLegs=new Set();
+async function legTimetable(leg, dispBt){
+  const feeds=await fetchFeeds([leg.line]);
+  const feed=feeds[FEED_FOR[leg.line]];
+  if(!feed) return null;
+  const all=findTrips(feed, leg.line, leg.from, leg.to, dispBt-2400, false);
+  let prev=null;
+  const next=[];
+  for(const tr of all){
+    if(tr.bt<dispBt-30) prev=tr;
+    else if(tr.bt>dispBt+30&&next.length<3) next.push(tr);
+  }
+  return {prev:prev, next:next};
+}
+function ttHtml(dispBt, tt){
+  let h="";
+  if(tt&&tt.prev){
+    h+='<div class="tt-row tt-prev"><span>'+fmtClock(tt.prev.bt)+'</span><span class="tt-tag">'+esc(t("tt_prev"))+'</span></div>';
+  }
+  h+='<div class="tt-row tt-cur"><span>▶ '+fmtClock(dispBt)+'</span><span class="tt-tag">'+cdHtml(dispBt)+'</span></div>';
+  if(tt) for(const tr of tt.next){
+    h+='<div class="tt-row"><span>'+fmtClock(tr.bt)+'</span><span class="tt-tag">'+cdHtml(tr.bt)+'</span></div>';
+  }
+  return h;
+}
+async function loadTtInto(el, leg, dispBt){
+  try{
+    const tt=await legTimetable(leg, dispBt);
+    el.innerHTML=tt?ttHtml(dispBt, tt):'<div class="leg-sub">—</div>';
+  }catch(e){ el.innerHTML='<div class="leg-sub">—</div>'; }
+}
+function tap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){} }
+function toggleTt(key, leg, dispBt, cardEl){
+  const el=cardEl.querySelector(".tt");
+  if(!el) return;
+  if(expandedLegs.has(key)){
+    expandedLegs.delete(key);
+    el.style.display="none";
+  }else{
+    expandedLegs.add(key);
+    el.style.display="block";
+    el.innerHTML='<div class="leg-sub">…</div>';
+    loadTtInto(el, leg, dispBt);
+  }
+  const ch=cardEl.querySelector(".chev");
+  if(ch) ch.classList.toggle("open", expandedLegs.has(key));
+}
+function makeTappable(cardEl, key, leg, trip){
+  if(!trip) return;
+  cardEl.style.cursor="pointer";
+  const head=cardEl.querySelector(".leg-head");
+  if(head&&!head.querySelector(".chev")){
+    const s=document.createElement("span");
+    s.className="chev"+(expandedLegs.has(key)?" open":"");
+    s.textContent="›";
+    head.appendChild(s);
+  }
+  cardEl.addEventListener("click", ()=>{ tap(); toggleTt(key, leg, trip.bt, cardEl); });
+  let ttEl=cardEl.querySelector(".tt");
+  if(!ttEl){
+    ttEl=document.createElement("div");
+    ttEl.className="tt";
+    ttEl.style.display="none";
+    cardEl.appendChild(ttEl);
+  }
+  if(expandedLegs.has(key)){
+    ttEl.style.display="block";
+    ttEl.innerHTML='<div class="leg-sub">…</div>';
+    loadTtInto(ttEl, leg, trip.bt);
+  }
+}
+function renderLegs(legResults, box){
+  legResults.forEach((r,i)=>{
+    const leg=r.leg, st=statusOf(leg.line);
+    if(i===0){
+      // first leg: full card with boarding countdown
+      const d=document.createElement("div");
+      d.className="leg";
+      let html='<div class="leg-head">'+lineBadge(leg.line)+'<span class="dot '+dotCls(st.cls)+'" title="'+esc(sevLabel(st.cls))+'"></span><span>'+esc(stationName(leg.from))+' &rarr; '+esc(stationName(leg.to))+'</span>'+(leg.auto?'<span class="leg-sub" style="margin-left:6px">auto</span>':'')+'</div>';
+      if(r.trip){
+        const _m=Math.max(0,Math.round((r.trip.bt-Date.now()/1000)/60));
+        html+='<div class="leg-time">'+(_m<=0?'<b>'+esc(leg.line)+' boarding now</b>':esc(leg.line)+' leaves at <b>'+fmtClock(r.trip.bt)+'</b> <span class="leg-sub">(in '+_m+'min)</span>')+'</div>';
+      }else if(!r.feedOk){
+        html+='<div class="leg-sub">'+esc(t("no_feed",{line:leg.line}))+'</div>';
+      }else{
+        html+='<div class="leg-sub">'+esc(t("no_trains",{line:leg.line}))+'</div>';
+      }
+      if(st.text) html+='<div class="alert-text">'+esc(st.text)+'</div>';
+      d.innerHTML=html;
+      box.appendChild(d);
+      makeTappable(d, "leg"+i, leg, r.trip);
+    }else{
+      // later legs: folded into the transfer card (no duplicate leg card)
+      const prev=legResults[i-1];
+      const t1=prev.trip, t2=r.trip;
+      const td=document.createElement("div");
+      td.className="leg transfer";
+      let th='<div class="leg-head">'+lineBadge(leg.line)+'<span class="dot '+dotCls(st.cls)+'" title="'+esc(sevLabel(st.cls))+'"></span><span>'+esc(t("transfer_at",{station:stationName(prev.leg.to)}))+'</span></div>';
+      if(t1&&t1.at){
+        th+='<div class="leg-time">'+esc(prev.leg.line)+' arrives at <b>'+fmtClock(t1.at)+'</b></div>';
+        if(t2){
+          const wait=Math.max(0,Math.round((t2.bt-t1.at)/60));
+          th+='<div class="leg-time">'+esc(leg.line)+' leaves at <b>'+fmtClock(t2.bt)+'</b></div>';
+          th+='<div class="leg-sub">'+(wait>0?t("transfer_wait",{n:wait}):t("transfer_now"))+'.</div>';
+        }else{
+          th+='<div class="leg-sub">'+esc(t("waiting_conn",{line:leg.line}))+'</div>';
+        }
+      }else{
+        th+='<div class="leg-sub">'+esc(t("transfer_to",{line:leg.line}))+'</div>';
+      }
+      if(st.text) th+='<div class="alert-text">'+esc(st.text)+'</div>';
+      td.innerHTML=th;
+      box.appendChild(td);
+      makeTappable(td, "leg"+i, leg, t2);
+    }
+    // arrival card after last leg
+    if(i===legResults.length-1){
+      const trip=r.trip;
+      const fd=document.createElement("div");
+      fd.className="leg";
+      let fh;
+      if(trip&&trip.at){
+        fh='<div class="leg-head">📍 '+esc(stationName(leg.to))+' at '+fmtClock(trip.at)+'</div>';
+      }else{
+        fh='<div class="leg-head">'+esc(t("arrive",{station:stationName(leg.to)}))+'</div>'
+          +'<div class="leg-sub">'+esc(t("arr_unavailable"))+'</div>';
+      }
+      fd.innerHTML=fh;
+      box.appendChild(fd);
+    }
+  });
+  if(stationNotes.length){
+    const n=document.createElement("div");
+    n.className="alert-text";
+    n.innerHTML=esc(t("station_notices"))+"<br>"+stationNotes.slice(0,3).map(esc).join("<br>");
+    box.appendChild(n);
+  }
+}
+function lockTrip(legResults, walkMin, arrWalkMin){
+  // Freeze the current plan so refreshes don't shift trains while moving
+  lockedPlan={
+    legResults:JSON.parse(JSON.stringify(legResults)),
+    walkMin:walkMin, arrWalkMin:arrWalkMin,
+    departedAt:Date.now(), destIndex:S.destIndex
+  };
+  try{ localStorage.setItem("roam_lock", JSON.stringify(lockedPlan)); }catch(e){}
+  renderRoute(lockedPlan.legResults, walkMin, arrWalkMin, true);
+}
+function unlockTripSilent(){
+  lockedPlan=null;
+  try{ localStorage.removeItem("roam_lock"); }catch(e){}
+}
+function unlockTrip(){
+  lockedPlan=null;
+  try{ localStorage.removeItem("roam_lock"); }catch(e){}
+  loadAll();
+}
+function restoreLock(){
+  // Restore a lock from a previous session if still fresh (<3h)
+  try{
+    const raw=localStorage.getItem("roam_lock");
+    if(!raw) return;
+    const lp=JSON.parse(raw);
+    if(Date.now()-lp.departedAt<3*3600*1000 && lp.destIndex===S.destIndex){
+      lockedPlan=lp;
+    }else{
+      localStorage.removeItem("roam_lock");
+    }
+  }catch(e){}
+}
+let departOptionsCache=[];
+let departIdx=0;
+function renderRoute(legResults, walkMin, arrWalkMin, isLocked){
+  const box=$("legs");
+  box.innerHTML="";
+  const walkEmoji="\uD83D\uDEB6";
+  if(isLocked&&lockedPlan){
+    // Frozen trip: show departed state with unlock option
+    const lv=document.createElement("div");
+    lv.className="leave-line";
+    lv.innerHTML=walkEmoji+" Departed <b>"+fmtClock(lockedPlan.departedAt/1000)+"</b> "
+      +'<button id="unlock-btn" class="mini-btn">Unlock</button>';
+    box.appendChild(lv);
+    const ub=lv.querySelector("#unlock-btn");
+    if(ub) ub.onclick=(e)=>{ e.stopPropagation(); tap(); unlockTrip(); };
+  }else if(walkMin!=null){
+    const mins=Math.round(walkMin);
+    // Leave-by time follows the selected departure option when available
+    let leaveBySec=null;
+    if(!isLocked&&departOptionsCache.length>=1){
+      leaveBySec=departOptionsCache[departIdx].leaveBy;
+    }else{
+      const allTrips=legResults[0].trips||(legResults[0].trip?[legResults[0].trip]:[]);
+      const nowSec=Date.now()/1000;
+      for(const tr of allTrips){
+        if(tr.bt-mins*60>=nowSec){ leaveBySec=tr.bt-mins*60; break; }
+      }
+    }
+    // Line 1: departure options toggle (2+ options)
+    if(!isLocked&&departOptionsCache.length>=2){
+      const seg=document.createElement("div");
+      seg.className="seg";
+      seg.id="depart-seg";
+      seg.style.margin="8px 0 4px";
+      departOptionsCache.forEach((opt,i)=>{
+        const btn=document.createElement("button");
+        btn.className="seg-btn"+(i===departIdx?" sel":"");
+        const durMin=(opt.arriveDest!=null)?Math.round((opt.arriveDest-opt.leaveBy)/60):null;
+        btn.textContent=fmtClockShort(opt.leaveBy)+"-"+(opt.arriveDest!=null?fmtClockShort(opt.arriveDest):"")+(durMin!=null?" ("+durMin+"min)":"");
+        btn.onclick=(e)=>{ e.stopPropagation(); tap(); selectDepartOption(i, walkMin, arrWalkMin); };
+        seg.appendChild(btn);
+      });
+      box.appendChild(seg);
+    }
+    // Line 2: Leave by + Depart button (AM/PM on the Leave by time)
+    const lv=document.createElement("div");
+    lv.className="leave-line";
+    lv.innerHTML=walkEmoji+(leaveBySec!=null?" Leave by <b>"+fmtClock(leaveBySec)+"</b>":"")
+      +' <button id="depart-btn" class="mini-btn">Depart →</button>';
+    box.appendChild(lv);
+    const db=lv.querySelector("#depart-btn");
+    if(db) db.onclick=(e)=>{ e.stopPropagation(); tap(); lockTrip(legResults, walkMin, arrWalkMin); };
+  }
+  renderLegs(legResults, box);
+  // final home/work arrival as its own line after the last card (like leave-by)
+  const lastTrip=legResults[legResults.length-1].trip;
+  if(lastTrip&&lastTrip.at&&arrWalkMin!=null){
+    const av=document.createElement("div");
+    av.className="leave-line";
+    av.innerHTML="🏢"+" Arrive by <b>"+fmtClock(lastTrip.at+arrWalkMin*60)+"</b>";
+    box.appendChild(av);
+  }
+}
+function selectDepartOption(i, walkMin, arrWalkMin){
+  if(i<0||i>=departOptionsCache.length) return;
+  departIdx=i;
+  try{
+    sessionStorage.setItem("roam_depart", JSON.stringify({
+      destIndex:S.destIndex, trainBt:departOptionsCache[i].trainBt
+    }));
+  }catch(e){}
+  const opt=departOptionsCache[i];
+  renderRoute(opt.legResults, walkMin, arrWalkMin, false);
+  renderAlts([], opt.legResults);
+}
+function renderAlts(options, legResults){
+  const box=$("alts");
+  box.innerHTML="";
+  const disrupted=hasDisruption(legResults);
+  if(!options.length){
+    const d=document.createElement("div");
+    if(disrupted){
+      d.className="leg-sub";
+      d.textContent=t("no_faster");
+    }else{
+      d.className="allclear";
+      d.textContent=t("all_clear");
+    }
+    box.appendChild(d);
+    return;
+  }
+  const p=document.createElement("div");
+  p.className="leg-sub";
+  p.textContent=t("fastest_opts");
+  box.appendChild(p);
+  const normalArr=(legResults.length&&legResults[legResults.length-1].trip)
+    ? legResults[legResults.length-1].trip.at : null;
+  options.forEach(opt=>{
+    const total=Math.max(1,Math.round((opt.arrivalSec-Date.now()/1000)/60));
+    const d=document.createElement("div");
+    d.className="alt";
+    d.style.cursor="pointer";
+    const badges=opt.legs.map(l=>lineBadge(l.line)).join("");
+    let sub=t("alt_sub",{total:total,walk:opt.walkMin,station:esc(stationName(opt.legs[0].from))});
+    if(opt.legs.length>1) sub+=" · "+t("via",{station:esc(stationName(opt.legs[0].to))});
+    let cmp="";
+    if(normalArr){
+      const diff=Math.round((normalArr-opt.arrivalSec)/60);
+      cmp=diff>0
+        ? '<div style="color:var(--green);font-weight:700">'+esc(t("faster",{n:diff}))+'</div>'
+        : '<div class="leg-sub">'+esc(t("slower",{n:-diff}))+'</div>';
+    }
+    d.innerHTML='<div class="leg-head">'+badges+'<span>'+t("arrive_at",{time:fmtClock(opt.arrivalSec)})+'</span></div>'+
+      '<div class="leg-sub">'+sub+'</div>'+cmp+
+      '<div class="leg-sub">'+esc(t("tap_timing"))+'</div>';
+    d.onclick=()=>{ viewingAlt=opt; loadAll(); window.scrollTo(0,0); };
+    box.appendChild(d);
+  });
+}
+
+/* ===== alternative detail (tap an alternative for full timing) ===== */
+let viewingAlt=null; // {stationId, lines, line}
+let lockedPlan=null; // frozen trip after user taps Depart {legResults, walkMin, arrWalkMin, departedAt, direction}
+function destStation(){ const l=getLegs(); return l.length?l[l.length-1].to:null; }
+
+async function nextDepartures(feed, line, stationId, after, n){
+  const from=stopSet(stationId);
+  const out=[];
+  for(const e of feed){
+    const tu=e.trip_update;
+    if(!tu||!tu.trip) continue;
+    if((tu.trip.route_id||"")!==line) continue;
+    for(const stu of (tu.stop_time_update||[])){
+      const raw=stu.stop_id||"";
+      if(from.has(raw)||from.has(raw.replace(/[NS]$/,""))){
+        const bt=num(stu.arrival&&stu.arrival.time)||num(stu.departure&&stu.departure.time);
+        if(bt&&bt>=after-120) out.push({bt:bt, headsign:tu.trip.trip_headsign||""});
+        break;
+      }
+    }
+  }
+  out.sort((a,b)=>a.bt-b.bt);
+  return out.slice(0, n||5);
+}
+
+async function renderAltDetail(opt){
+  const box=$("legs");
+  box.innerHTML="";
+  const back=document.createElement("button");
+  back.className="btn";
+  back.style.marginBottom="8px";
+  back.textContent=t("back_route");
+  back.onclick=()=>{ viewingAlt=null; loadAll(); };
+  box.appendChild(back);
+  const h=document.createElement("div");
+  h.className="leg-head";
+  h.style.marginBottom="4px";
+  h.innerHTML=t("alt_route")+" "+opt.legs.map(l=>lineBadge(l.line)).join("");
+  box.appendChild(h);
+
+  const o=originInfo();
+  const st=ST_BY_ID[opt.legs[0].from];
+  const w=document.createElement("div");
+  w.className="leg-sub";
+  w.style.margin="8px 0";
+  w.textContent=t("walk_to",{min:opt.walkMin,place:t("home"),station:esc(st?st.name:"")});
+  box.appendChild(w);
+
+  // recompute fresh so the detail is never stale
+  const now=Math.floor(Date.now()/1000);
+  const res=await computeRoute(opt.legs, now+opt.walkMin*60);
+  if(res[0]&&res[0].trip){
+    renderLegs(res, box);
+  }else{
+    const d=document.createElement("div");
+    d.className="leg-sub";
+    d.textContent=t("opt_gone");
+    box.appendChild(d);
+  }
+  $("alts").innerHTML='<div class="leg-sub">'+esc(t("showing_alt"))+'</div>';
+  $("updated").textContent=t("updated",{time:fmtHM()});
+}
+
+function nyHour(sec){
+  const h=new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",hour:"numeric",hour12:false}).format(new Date(sec*1000));
+  return parseInt(h,10)%24;
+}
+function fmtPlannedWhen(start, end){
+  const dayFmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",weekday:"short",month:"numeric",day:"numeric"});
+  const nowD=new Date(), sD=new Date(start*1000);
+  const tomD=new Date(nowD.getTime()+86400000);
+  let day;
+  if(dayFmt.format(sD)===dayFmt.format(nowD)) day=t("today");
+  else if(dayFmt.format(sD)===dayFmt.format(tomD)) day=t("tomorrow");
+  else day=dayFmt.format(sD);
+  let when=day+", "+fmtClock(start);
+  if(end) when+=" – "+fmtClock(end);
+  return when;
+}
+function renderPlanned(){
+  const box=$("planned");
+  box.innerHTML=""; box.style.display="none";
+  const legs=getLegs();
+  if(!legs.length||!plannedRaw.length) return;
+  const myLines=new Set(legs.map(l=>l.line));
+  const seen=new Set(), items=[];
+  const sorted=plannedRaw.slice().sort((a,b)=>a.start-b.start);
+  for(const p of sorted){
+    if(!p.lines.some(l=>myLines.has(l))) continue;
+    // skip deep-overnight-only work (12am-5am): not relevant to commute hours
+    if(p.end){
+      const sh=nyHour(p.start), eh=nyHour(p.end);
+      if(sh<5&&eh<=5&&(p.end-p.start)<12*3600) continue;
+    }
+    const key=p.lines.slice().sort().join(",")+"|"+p.title;
+    if(seen.has(key)) continue;
+    seen.add(key);
+    items.push(p);
+    if(items.length>=3) break;
+  }
+  if(!items.length) return;
+  let h='<div class="planned"><div class="planned-head">⚠️ '+esc(t("planned_work"))+'</div>';
+  items.forEach((p,idx)=>{
+    const badges=p.lines.filter(l=>myLines.has(l)).map(l=>lineBadge(l)).join("");
+    h+='<div class="planned-item" data-pi="'+idx+'">'
+      +'<div>'+badges+'</div>'
+      +'<div class="planned-title">'+esc(p.title)+'</div>'
+      +'<div class="planned-when">'+esc(fmtPlannedWhen(p.start,p.end))+'</div>'
+      +(p.desc?'<div class="planned-desc">'+esc(p.desc)+'</div>':"")
+      +'</div>';
+  });
+  h+='</div>';
+  box.innerHTML=h;
+  box.style.display="block";
+  box.querySelectorAll(".planned-item").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const d=el.querySelector(".planned-desc");
+      if(d) d.style.display=d.style.display==="block"?"none":"block";
+    });
+  });
+}
+/* ===== main load ===== */
+let loading=false;
+async function loadAll(){
+  if(loading) return;
+  loading=true;
+  showErr("");
+  updateDestToggle();
+  try{
+    const o=originInfo();
+    // Weather loads in parallel — never blocks train data
+    if(o.lat!=null&&o.lon!=null){
+      Promise.all([fetchWeather(o.lat,o.lon).catch(()=>null), fetchNwsAlerts(o.lat,o.lon).catch(()=>[])])
+        .then(([wx,nws])=>{ if(wx) renderWeather(wx,nws); });
+    }
+    await fetchStatus().catch(()=>{});
+    renderPlanned();
+    if(viewingAlt){
+      await renderAltDetail(viewingAlt);
+    }else{
+      const legs=getLegs();
+      if(!legs.length){
+        $("legs").innerHTML='<div class="leg-sub">'+esc(t("no_route"))+'</div>';
+        renderAlts([], []);
+      }else if(lockedPlan&&lockedPlan.destIndex===S.destIndex){
+        // Locked trip: don't recompute, just re-render the frozen plan
+        renderRoute(lockedPlan.legResults, lockedPlan.walkMin, lockedPlan.arrWalkMin, true);
+        renderAlts([], lockedPlan.legResults);
+      }else{
+        let legResults=await computeRoute(legs);
+        let walkMin=null;
+        try{
+          const bs=ST_BY_ID[legResults[0].leg.from];
+          if(bs) walkMin=await walkMinutes(o.lat,o.lon,bs.lat,bs.lon);
+        }catch(e){}
+        // final walk: last station -> destination (same for all departure options)
+        let arrWalkMin=null;
+        try{
+          const dest=destInfo();
+          const ls=ST_BY_ID[legResults[legResults.length-1].leg.to];
+          if(dest.lat!=null&&dest.lon!=null&&ls) arrWalkMin=await walkMinutes(ls.lat,ls.lon,dest.lat,dest.lon);
+        }catch(e){}
+        // Build up to 2 departure options from the next catchable trains.
+        // Each option re-anchors the whole route on its train so transfers
+        // and arrival all reflect that departure. Feeds are cached, not refetched.
+        // Label: leave-origin time - arrive-destination time (walks included).
+        departOptionsCache=[];
+        departIdx=0;
+        if(walkMin!=null){
+          const nowSec=Date.now()/1000;
+          const trips=legResults[0].trips||[];
+          const catchable=trips.filter(tr=>tr.bt-walkMin*60>=nowSec).slice(0,2);
+          for(const tr of catchable){
+            const lr=await computeRoute(legs, tr.bt-1);
+            const at=lr[0]&&lr[0].trip;
+            if(at&&!departOptionsCache.some(o=>Math.abs(o.trainBt-at.bt)<60)){
+              const lastTrip=lr[lr.length-1]&&lr[lr.length-1].trip;
+              const arriveDest=(lastTrip&&lastTrip.at&&arrWalkMin!=null)?lastTrip.at+arrWalkMin*60:null;
+              departOptionsCache.push({leaveBy:at.bt-walkMin*60, trainBt:at.bt, arriveDest:arriveDest, legResults:lr});
+            }
+          }
+          if(departOptionsCache.length){
+            // Restore session selection by train time (robust to list shifts)
+            try{
+              const saved=JSON.parse(sessionStorage.getItem("roam_depart")||"null");
+              if(saved&&saved.destIndex===S.destIndex){
+                const fi=departOptionsCache.findIndex(o=>Math.abs(o.trainBt-saved.trainBt)<90);
+                if(fi>=0) departIdx=fi;
+              }
+            }catch(e){}
+            legResults=departOptionsCache[departIdx].legResults;
+          }
+        }
+        renderRoute(legResults, walkMin, arrWalkMin);
+        const alts=hasDisruption(legResults)?await findFastRoutes(legResults):[];
+        renderAlts(alts, legResults);
+      }
+      $("updated").textContent=t("updated",{time:fmtHM()});
+    }
+  }catch(e){
+    showErr(t("err_load")+" ("+String(e.message||e).slice(0,80)+")");
+  }
+  loading=false;
+}
+
+/* ===== searchable station picker ===== */
+function makePicker(el, leg, which, showChips){
+  el.innerHTML='<input class="f-input" placeholder=""+t("station_ph")+"" autocomplete="off">'+
+    '<div class="picker-list"></div>'+(showChips?'<div class="linechips"></div>':"");
+  const input=el.querySelector("input"), list=el.querySelector(".picker-list"),
+        chips=el.querySelector(".linechips");
+  function renderPicked(){
+    const st=ST_BY_ID[leg[which]];
+    if(document.activeElement!==input) input.value=st?st.name:"";
+    if(!chips) return;
+    chips.innerHTML="";
+    if(st&&st.lines.length>1){
+      st.lines.forEach(l=>{
+        const b=document.createElement("button");
+        b.type="button";
+        b.className="chip"+(l===leg.line?" sel":"");
+        b.textContent=l;
+        b.onclick=()=>{ leg.line=l; saveSettings(); renderPicked(); };
+        chips.appendChild(b);
+      });
+    }
+  }
+  function filter(){
+    const q=input.value.trim().toLowerCase();
+    list.innerHTML="";
+    if(!q){ list.classList.remove("open"); return; }
+    const matches=STATIONS.filter(s=>s.name.toLowerCase().includes(q)).slice(0,40);
+    matches.forEach(s=>{
+      const d=document.createElement("div");
+      d.className="picker-item";
+      d.innerHTML=s.lines.map(lineBadge).join("")+"<span>"+esc(s.name)+"</span>";
+      d.onclick=()=>{
+        leg[which]=s.id;
+        if(!s.lines.includes(leg.line)) leg.line=s.lines[0];
+        saveSettings();
+        input.value=s.name;
+        list.classList.remove("open");
+        renderPicked();
+      };
+      list.appendChild(d);
+    });
+    list.classList.toggle("open", matches.length>0);
+  }
+  input.addEventListener("input", filter);
+  input.addEventListener("focus", ()=>{ input.select(); filter(); });
+  document.addEventListener("click", e=>{ if(!el.contains(e.target)){ list.classList.remove("open"); renderPicked(); } });
+  renderPicked();
+  return { refresh: renderPicked };
+}
+function fmtAddr(a){
+  const ad=a.address||{};
+  const num=String(ad.house_number||"").trim();
+  const road=String(ad.road||ad.pedestrian||ad.footway||ad.cycleway||"").trim();
+  let line1=(num+" "+road).trim();
+  if(!line1){
+    line1=String(a.display_name||"").split(",").slice(0,2).join(",").trim();
+  }
+  line1=line1.replace(/^(\d+),\s*/,"$1 ");
+  const suburb=String(ad.suburb||ad.neighbourhood||ad.quarter||ad.borough||"").trim();
+  const city=String(ad.city||ad.town||ad.village||ad.municipality||"").trim();
+  let state=String(ad.state||"").trim();
+  const iso=String(ad["ISO3166-2-lvl4"]||"").trim();
+  if(/^US-/i.test(iso)) state=iso.slice(3).toUpperCase();
+  const zip=String(ad.postcode||"").trim();
+  const norm=s=>s.toLowerCase().replace(/[^a-z]/g,"");
+  const cityIsState=(()=>{
+    if(!city||!state) return false;
+    if(norm(city)===norm(state)) return true;
+    if(state.length===2){
+      const initials=city.toLowerCase().replace(/[^a-z ]/g,"").trim().split(/\s+/).map(w=>w[0]||"").join("");
+      return initials===state.toLowerCase();
+    }
+    return false;
+  })();
+  const parts=[];
+  if(suburb) parts.push(suburb);
+  if(city&&norm(city)!==norm(suburb)&&!cityIsState) parts.push(city);
+  const stzip=(state+(zip?" "+zip:"")).trim();
+  if(stzip) parts.push(stzip);
+  const line2=parts.join(", ");
+  return {line1:line1,line2:line2,full:line2?line1+", "+line2:line1};
+}
+function attachAddrAC(inputId, listId){
+  const inp=$(inputId), list=document.getElementById(listId);
+  let t=null, lastQ="";
+  inp.addEventListener("input",()=>{
+    inp.dataset.lat=""; inp.dataset.lon="";
+    clearTimeout(t);
+    const q=inp.value.trim();
+    if(q.length<3){list.innerHTML="";return;}
+    t=setTimeout(async()=>{
+      if(q===lastQ) return; lastQ=q;
+      try{
+        const url="https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=us&viewbox=-74.35,40.45,-73.65,40.95&q="+encodeURIComponent(q);
+        const r=await fetch(url,{headers:{"Accept":"application/json"}});
+        const arr=await r.json();
+        list.innerHTML="";
+        arr.forEach(a=>{
+          const d=document.createElement("div"); d.className="pick-item";
+          const f=fmtAddr(a);
+          d.innerHTML="<div><b>"+esc(f.line1)+"</b>"+(f.line2?"<br><span class=pick-line>"+esc(f.line2)+"</span>":"")+"</div>";
+          d.onclick=()=>{inp.value=f.full; inp.dataset.lat=a.lat; inp.dataset.lon=a.lon; list.innerHTML="";};
+          list.appendChild(d);
+        });
+      }catch(e){}
+    },450);
+  });
+  document.addEventListener("click",e=>{ if(!list.contains(e.target)&&e.target!==inp) list.innerHTML=""; });
+}
+function renderDestEditors(){
+  const wrap=$("dest-list");
+  wrap.innerHTML="";
+  for(let i=0;i<3;i++){
+    const d=S.dests[i]||{name:"",label:""};
+    const box=document.createElement("div");
+    box.style.marginTop="10px";
+    box.innerHTML=
+      '<div class="f-label" style="margin-bottom:4px">'+esc(t("dest_n",{n:i+1}))+'</div>'+
+      '<input class="f-input" id="set-dest-name-'+i+'" placeholder="'+esc(t("dest_name_ph"))+'" value="'+esc(d.name||"")+'" autocomplete="off" style="margin-bottom:6px">'+
+      '<div class="pick-wrap"><input class="f-input" id="set-dest-'+i+'" placeholder="'+esc(t("dest_ph"))+'" value="'+esc(d.label||"")+'" autocomplete="off">'+
+      '<div class="pick-list" id="dest-ac-'+i+'"></div></div>';
+    wrap.appendChild(box);
+    attachAddrAC("set-dest-"+i,"dest-ac-"+i);
+  }
+}
+function applyI18n(){
+  document.title="Roam";
+  $("h-route").textContent=t("your_route");
+  $("h-alt").textContent=t("alternatives");
+  updateDestToggle();
+  $("set-title").textContent=t("settings_title");
+  $("sheet-close").textContent=t("done");
+  $("lbl-home").textContent=t("home_address");
+  $("lbl-dest").textContent=t("destinations");
+  $("lbl-dest-hint").textContent=t("dest_hint");
+  $("set-home").placeholder=t("home_ph");
+  $("set-save").textContent=t("save");
+  $("lbl-note").textContent=t("addr_note");
+  renderDestEditors();
+}
+function updateDestToggle(){
+  document.querySelectorAll("#dest-toggle .seg-btn").forEach(x=>{
+    const i=+x.dataset.dest;
+    const d=(S.dests&&S.dests[i])||{};
+    x.textContent=d.name||t("dest_n",{n:i+1});
+    x.classList.toggle("sel", i===S.destIndex);
+  });
+}
+/* select-all on focus for numeric text inputs (iOS Safari: type=number ignores select()) */
+function selectAllOnFocus(el){
+  const sel=()=>{ try{ el.select(); }catch(e){} };
+  el.addEventListener("focus", ()=>{
+    // iOS Safari presents the keyboard asynchronously; defer selection
+    sel();
+    requestAnimationFrame(sel);
+    setTimeout(sel, 100);
+  });
+  // re-tap on an already-focused field should also select all
+  el.addEventListener("click", ()=>{ if(document.activeElement===el) sel(); });
+}
+function initSettings(){
+  $("set-home").value=S.home.label||"";
+  $("set-home").dataset.lat=S.home.lat||"";
+  $("set-home").dataset.lon=S.home.lon||"";
+  attachAddrAC("set-home","home-ac");
+  applyI18n();
+  $("sheet-close").onclick=()=>{ $("sheet").classList.remove("open"); };
+  $("settings-btn").onclick=()=>{ tap(); $("sheet").classList.add("open"); };
+  $("refresh-btn").onclick=()=>{ tap(); const rb=$("refresh-btn"); rb.classList.add("spinning"); loadAll().finally(()=>rb.classList.remove("spinning")); };
+  $("sheet").addEventListener("click",e=>{ if(e.target===$("sheet")) $("sheet").classList.remove("open"); });
+  $("set-save").onclick=async ()=>{
+    const btn=$("set-save");
+    btn.textContent=t("saving");
+    btn.disabled=true;
+    try{
+      const hl=$("set-home").value.trim();
+      if(hl&&hl!==S.home.label){
+        const hi=$("set-home");
+        if(hi.dataset.lat&&hi.dataset.lon) S.home={label:hl,lat:+hi.dataset.lat,lon:+hi.dataset.lon};
+        else{ const g=await geocode(hl); if(g) S.home={label:hl,lat:g.lat,lon:g.lon}; else S.home.label=hl; }
+      }
+      for(let i=0;i<3;i++){
+        const nm=$("set-dest-name-"+i).value.trim();
+        const al=$("set-dest-"+i).value.trim();
+        const prev=S.dests[i]||{};
+        let lat=prev.lat||null, lon=prev.lon||null, label=al;
+        if(al&&al!==prev.label){
+          const ai=$("set-dest-"+i);
+          if(ai.dataset.lat&&ai.dataset.lon){ lat=+ai.dataset.lat; lon=+ai.dataset.lon; }
+          else{ const g=await geocode(al); if(g){ lat=g.lat; lon=g.lon; } }
+        }else if(!al){ lat=null; lon=null; }
+        S.dests[i]={name:nm, label:label, lat:lat, lon:lon};
+      }
+      saveSettings();
+      updateDestToggle();
+      $("sheet").classList.remove("open");
+      loadAll();
+    }catch(e){ showErr(t("err_save")+String(e.message||e).slice(0,80)); }
+    btn.textContent=t("save");
+    btn.disabled=false;
+  };
+}
+/* ===== init ===== */
+restoreLock();
+setInterval(()=>{ if(!document.hidden) loadAll(); }, 30000);
+document.querySelectorAll("#dest-toggle .seg-btn").forEach(b=>{
+  b.onclick=()=>{
+    tap();
+    const i=+b.dataset.dest;
+    if(S.destIndex!==i){
+      S.destIndex=i;
+      unlockTripSilent();
+      saveSettings();
+      updateDestToggle();
+      loadAll();
+    }
+  };
+});
+initSettings();
+updateDestToggle();
+loadAll();
+
+</script>
+</body>
+</html>
