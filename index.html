@@ -1204,7 +1204,7 @@ function renderLegs(legResults, box){
       if(trip&&trip.at){
         fh='<div class="leg-head">📍 '+esc(stationName(leg.to))+' at '+fmtClock(trip.at)+'</div>';
       }else{
-        fh='<div class="leg-head">'+esc(t("arrive",{station:stationName(leg.to)}))+'</div>'
+        fh='<div class="leg-head">📍 '+esc(t("arrive",{station:stationName(leg.to)}))+'</div>'
           +'<div class="leg-sub">'+esc(t("arr_unavailable"))+'</div>';
       }
       fd.innerHTML=fh;
@@ -1252,7 +1252,7 @@ function restoreLock(){
 }
 let departOptionsCache=[];
 let departIdx=0;
-function renderRoute(legResults, walkMin, arrWalkMin, isLocked){
+function renderRoute(legResults, walkMin, arrWalkMin, isLocked, arriveDestEst){
   const box=$("legs");
   box.innerHTML="";
   const walkEmoji=(S.dir==="inbound"||gpsOrigin)?"\uD83D\uDD7A":"\uD83D\uDEB6";
@@ -1316,10 +1316,13 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked){
   }
   // final home/work arrival as its own line after the last card (like leave-by)
   const lastTrip=legResults[legResults.length-1].trip;
-  if(lastTrip&&lastTrip.at&&arrWalkMin!=null){
+  let arriveBy=null;
+  if(lastTrip&&lastTrip.at&&arrWalkMin!=null) arriveBy=lastTrip.at+arrWalkMin*60;
+  else if(arriveDestEst!=null) arriveBy=arriveDestEst;
+  if(arriveBy!=null){
     const av=document.createElement("div");
     av.className="leave-line";
-    av.innerHTML=(S.dir==="inbound"?"🏠":"🏢")+" Arrive by <b>"+fmtClock(lastTrip.at+arrWalkMin*60)+"</b>";
+    av.innerHTML=(S.dir==="inbound"?"🏠":"🏢")+" Arrive by <b>"+fmtClock(arriveBy)+"</b>";
     box.appendChild(av);
   }
 }
@@ -1332,7 +1335,7 @@ function selectDepartOption(i, walkMin, arrWalkMin){
     }));
   }catch(e){}
   const opt=departOptionsCache[i];
-  renderRoute(opt.legResults, walkMin, arrWalkMin, false);
+  renderRoute(opt.legResults, walkMin, arrWalkMin, false, opt.arriveDest);
   renderAlts([], opt.legResults, null);
 }
 function renderAlts(options, legResults, arrWalkMin){
@@ -1635,7 +1638,8 @@ async function loadAll(){
             legResults=departOptionsCache[departIdx].legResults;
           }
         }
-        renderRoute(legResults, walkMin, arrWalkMin);
+        const _arrEst=(departOptionsCache[departIdx]&&departOptionsCache[departIdx].arriveDest!=null)?departOptionsCache[departIdx].arriveDest:null;
+        renderRoute(legResults, walkMin, arrWalkMin, false, _arrEst);
         const alts=hasDisruption(legResults)?await findFastRoutes(legResults):[];
         renderAlts(alts, legResults, arrWalkMin);
       }
