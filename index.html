@@ -40,7 +40,9 @@ button{ -webkit-tap-highlight-color:transparent; }
 /* weather */
 .tier-wxstrip{padding:10px 16px;}
 .wx-strip{font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums;}
-.wx-strip .wx-icon{font-size:18px; margin-right:6px;}
+.wx-strip .wx-icon{font-size:18px; margin:0 6px;}
+.wx-strip .wx-date{font-weight:600; margin-right:6px;}
+.wx-strip .wx-time{color:#666; margin-right:6px;}
 .wx-clothing{font-size:16px; margin:0 2px;}
 .wx-strip{cursor:pointer;}
 .wx-abadge{color:#B7791F; font-weight:600;}
@@ -1030,8 +1032,13 @@ function renderWeather(w, alerts){
     const cur=w.current, daily=w.daily, code=cur.weather_code;
     const strip=$("wx-strip");
     const cTemp=Math.round(cur.temperature_2m);
-    let h='<span class="wx-icon">'+(WMO_ICON[code]||"")+'</span>'+
+    const now=new Date();
+    const dateStr=now.toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric"});
+    const timeStr=now.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+    let h='<span class="wx-date">'+esc(dateStr)+'</span> '+
+      '<span class="wx-time">'+esc(timeStr)+'</span> '+
       '<b>'+tempBoth(cur.temperature_2m)+'</b> '+
+      '<span class="wx-icon">'+(WMO_ICON[code]||"")+'</span>'+
       '<span class="wx-clothing" title="'+esc(t("clothing_"+clothingKey(cTemp)))+'">'+clothingIcon(cTemp)+'</span>';
     if(alerts.length){
       h+=' <span class="wx-abadge">⚠️ '+esc(alerts[0].event)+(alerts.length>1?" +"+(alerts.length-1):"")+'</span>';
