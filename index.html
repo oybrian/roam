@@ -41,6 +41,7 @@ button{ -webkit-tap-highlight-color:transparent; }
 .tier-wxstrip{padding:10px 16px;}
 .wx-strip{font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums;}
 .wx-strip .wx-icon{font-size:18px; margin-right:6px;}
+.wx-clothing{font-size:16px; margin:0 2px;}
 .wx-strip{cursor:pointer;}
 .wx-abadge{color:#B7791F; font-weight:600;}
 .chev-wx{color:#8E8E93; font-size:16px;}
@@ -246,7 +247,7 @@ route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one l
 leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
 save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
 max_legs:"Maximum 4 legs.",station_ph:"Type station name…",
-to_work:"To Work",to_home:"To Home",to_prefix:"To ",to_dest:"Dest",your_route:"Your route",alternatives:"Alternatives",
+to_work:"To Work",to_home:"To Home",to_prefix:"To ",to_dest:"Dest",clothing_hot:"Tank top, shorts",clothing_warm:"T-shirt",clothing_mild:"Shirt",clothing_cool:"Light jacket",clothing_chilly:"Jacket",clothing_cold:"Coat, scarf",clothing_vcold:"Heavy coat, scarf",clothing_freezing:"Padded coat, scarf, gloves",your_route:"Your route",alternatives:"Alternatives",
 wind:"Wind",rain:"Rain",home:"home",work:"work",
 walk_to:"Walk ~{min} min from {place} to {station}",
 add_addr:"Add your {place} address in Settings for walk time.",
@@ -981,13 +982,37 @@ async function findFastRoutes(legResults){
 /* ===== render ===== */
 function dotCls(cls){ return cls==="green"?"green":cls; }
 const wxState={open:false};
+function clothingKey(c){
+  if(c>=28) return "hot";
+  if(c>=23) return "warm";
+  if(c>=20) return "mild";
+  if(c>=17) return "cool";
+  if(c>=12) return "chilly";
+  if(c>=9) return "cold";
+  if(c>=5) return "vcold";
+  return "freezing";
+}
+function clothingIcon(c){
+  // c = celsius. Returns emoji icons per Brian's guide.
+  if(c>=28) return "\uD83C\uDFBD"; // 🎽 tank top
+  if(c>=23) return "\uD83D\uDC55"; // 👕 t-shirt
+  if(c>=20) return "\uD83D\uDC54"; // 👔 shirt
+  if(c>=17) return "\uD83E\uDDE5"; // 🧥 coat (light jacket)
+  if(c>=12) return "\uD83E\uDDE5"; // 🧥 coat
+  if(c>=9) return "\uD83E\uDDE5\uD83E\uDDE3"; // 🧥🧣 coat+scarf
+  if(c>=5) return "\uD83E\uDDE5\uD83E\uDDE3"; // 🧥🧣
+  return "\uD83E\uDDE5\uD83E\uDDE3\uD83E\uDDE4"; // 🧥🧣🧤
+}
 function renderWeather(w, alerts){
   alerts=alerts||[];
   try{
     const cur=w.current, daily=w.daily, code=cur.weather_code;
     const strip=$("wx-strip");
+    const cTemp=Math.round((cur.temperature_2m-32)*5/9);
     let h='<span class="wx-icon">'+(WMO_ICON[code]||"")+'</span>'+
-      '<b>'+tempBoth(cur.temperature_2m)+'</b> '+esc(wmoText(code));
+      '<b>'+tempBoth(cur.temperature_2m)+'</b> '+
+      '<span class="wx-clothing" title="'+esc(t("clothing_"+clothingKey(cTemp)))+'">'+clothingIcon(cTemp)+'</span> '+
+      esc(wmoText(code));
     if(alerts.length){
       h+=' <span class="wx-abadge">⚠️ '+esc(alerts[0].event)+(alerts.length>1?" +"+(alerts.length-1):"")+'</span>';
     }
