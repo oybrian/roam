@@ -1617,9 +1617,14 @@ function makePicker(el, leg, which, showChips){
 }
 function fmtAddr(a){
   const ad=a.address||{};
+  const poiName=String(a.name||"").trim();
   const num=String(ad.house_number||"").trim();
   const road=String(ad.road||ad.pedestrian||ad.footway||ad.cycleway||"").trim();
   let line1=(num+" "+road).trim();
+  // If it's a named POI (not just an address), show the name
+  if(poiName&&line1.toLowerCase()!==poiName.toLowerCase()){
+    line1=poiName;
+  }
   if(!line1){
     line1=String(a.display_name||"").split(",").slice(0,2).join(",").trim();
   }
