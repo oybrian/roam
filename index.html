@@ -1735,7 +1735,7 @@ function initSettings(){
         if(hi.dataset.lat&&hi.dataset.lon) S.home={label:hl,lat:+hi.dataset.lat,lon:+hi.dataset.lon};
         else{ const g=await geocode(hl); if(g) S.home={label:hl,lat:g.lat,lon:g.lon}; else S.home.label=hl; }
       }
-      for(let i=0;i<3;i++){
+      for(let i=0;i<2;i++){
         const nm=$("set-dest-name-"+i).value.trim();
         const al=$("set-dest-"+i).value.trim();
         const prev=S.dests[i]||{};
