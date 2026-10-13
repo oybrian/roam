@@ -168,9 +168,11 @@ button{font:inherit;}
   <section class="tier" id="tier-route">
     <h2 id="h-route">Your route</h2>
     <div id="route-controls" style="display:flex; flex-direction:column; gap:12px; margin-bottom:12px">
+    <div style="font-size:11px; color:#8e8e93; margin-bottom:-8px">From home</div>
     <div class="seg" id="dest-toggle" style="margin-bottom:0"></div>
     <div class="seg" id="dir-toggle2" style="display:none"><button class="seg-btn sel" data-dir="outbound" id="dir-outbound-btn">To Dest</button><button class="seg-btn" data-dir="inbound">To Home</button></div>
-    <div style="display:flex; gap:8px; width:100%; margin-bottom:0">
+    <div style="font-size:11px; color:#8e8e93; margin-bottom:-8px">From where you are</div>
+    <div style="display:flex; gap:8px; width:100%; margin-bottom:0" id="gps-btn-row">
       <button id="take-me-home-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me home"></button>
       <button id="take-me-dest-0-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 1"></button>
       <button id="take-me-dest-1-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 2"></button>
@@ -2162,11 +2164,19 @@ function syncGpsButtons(){
   if(d0b){
     const nm=((S.dests&&S.dests[0]&&S.dests[0].name)||"").trim()||"Destination 1";
     d0b.innerHTML="📍<br><span style='font-size:11px'>"+esc(nm)+"</span>";
+    d0b.style.display="";
   }
   const d1b=$("take-me-dest-1-btn");
   if(d1b){
-    const nm=((S.dests&&S.dests[1]&&S.dests[1].name)||"").trim()||"Destination 2";
-    d1b.innerHTML="📍<br><span style='font-size:11px'>"+esc(nm)+"</span>";
+    const d1=(S.dests&&S.dests[1])||{};
+    // Hide if Destination 2 has no location configured
+    if(d1.lat==null||d1.lon==null){
+      d1b.style.display="none";
+    }else{
+      d1b.style.display="";
+      const nm=(d1.name||"").trim()||"Destination 2";
+      d1b.innerHTML="📍<br><span style='font-size:11px'>"+esc(nm)+"</span>";
+    }
   }
 }
 (function(){
