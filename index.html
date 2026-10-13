@@ -1167,8 +1167,8 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked){
     box.appendChild(lv);
     const ub=lv.querySelector("#unlock-btn");
     if(ub) ub.onclick=(e)=>{ e.stopPropagation(); tap(); unlockTrip(); };
-  }else if(walkMin!=null){
-    const mins=Math.round(walkMin);
+  }else{
+    const mins=(walkMin!=null?Math.round(walkMin):0);
     // Leave-by time follows the selected departure option when available
     let leaveBySec=null;
     if(!isLocked&&departOptionsCache.length>=1){
@@ -1446,26 +1446,29 @@ async function loadAll(){
         // Label: leave-origin time - arrive-destination time (walks included).
         departOptionsCache=[];
         departIdx=0;
-        if(walkMin!=null){
+        {
           const nowSec=Date.now()/1000;
-          const trips=legResults[0].trips||[];
-          const catchable=trips.filter(tr=>tr.bt-walkMin*60>=nowSec).slice(0,2);
+          const trips=(legResults[0]&&legResults[0].trips)||[];
+          const wm=(walkMin!=null?walkMin:0);
+          const catchable=trips.filter(tr=>tr.bt-wm*60>=nowSec).slice(0,2);
           for(const tr of catchable){
             const lr=await computeRoute(legs, tr.bt-1);
             const at=lr[0]&&lr[0].trip;
             if(at&&!departOptionsCache.some(o=>Math.abs(o.trainBt-at.bt)<60)){
               const lastTrip=lr[lr.length-1]&&lr[lr.length-1].trip;
-              let arriveDest=(lastTrip&&lastTrip.at&&arrWalkMin!=null)?lastTrip.at+arrWalkMin*60:null;
+              const walkTail=(arrWalkMin!=null?arrWalkMin*60:0);
+              let arriveDest=(lastTrip&&lastTrip.at)?lastTrip.at+walkTail:null;
               if(arriveDest==null){
-                // Fallback: estimate from main route's travel duration
+                // Fallback: estimate from main route's train travel duration
                 const mainLast=legResults[legResults.length-1]&&legResults[legResults.length-1].trip;
                 const mainFirst=legResults[0]&&legResults[0].trip;
-                if(mainLast&&mainLast.at&&mainFirst&&mainFirst.bt&&arrWalkMin!=null){
-                  const mainDur=(mainLast.at+arrWalkMin*60)-(mainFirst.bt-walkMin*60);
-                  if(mainDur>0) arriveDest=(at.bt-walkMin*60)+mainDur;
+                if(mainLast&&mainLast.at&&mainFirst&&mainFirst.bt){
+                  const mainDur=mainLast.at-mainFirst.bt;
+                  if(mainDur>0) arriveDest=at.bt+mainDur+walkTail;
                 }
               }
-              departOptionsCache.push({leaveBy:at.bt-walkMin*60, trainBt:at.bt, arriveDest:arriveDest, legResults:lr});
+              const lb=(walkMin!=null?at.bt-walkMin*60:at.bt);
+              departOptionsCache.push({leaveBy:lb, trainBt:at.bt, arriveDest:arriveDest, legResults:lr});
             }
           }
           if(departOptionsCache.length){
