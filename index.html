@@ -1281,6 +1281,21 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked){
     if(db) db.onclick=(e)=>{ e.stopPropagation(); tap(); lockTrip(legResults, walkMin, arrWalkMin); };
   }
   renderLegs(legResults, box);
+  // final walk to destination as its own line (shows even without train data)
+  if(arrWalkMin!=null&&legResults.length){
+    const lastLeg=legResults[legResults.length-1].leg;
+    const destName=S.dir==="inbound"
+      ? t("home")
+      : (isSearchMode() ? (searchDest().name||searchDest().addr||"") : (destInfoRaw().name||""));
+    if(destName){
+      const wd=document.createElement("div");
+      wd.className="leg-sub";
+      wd.style.margin="8px 0";
+      // walk_to: "Walk ~{min} min from {place} to {station}" - reuse with station as destination
+      wd.textContent=t("walk_to",{min:Math.round(arrWalkMin),place:stationName(lastLeg.to),station:destName});
+      box.appendChild(wd);
+    }
+  }
   // final home/work arrival as its own line after the last card (like leave-by)
   const lastTrip=legResults[legResults.length-1].trip;
   if(lastTrip&&lastTrip.at&&arrWalkMin!=null){
