@@ -1272,13 +1272,16 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked){
       box.appendChild(seg);
     }
     // Line 2: Leave by + Depart button (AM/PM on the Leave by time)
-    const lv=document.createElement("div");
-    lv.className="leave-line";
-    lv.innerHTML=walkEmoji+(leaveBySec!=null?" Leave by <b>"+fmtClock(leaveBySec)+"</b>":"")
-      +' <button id="depart-btn" class="mini-btn">Depart →</button>';
-    box.appendChild(lv);
-    const db=lv.querySelector("#depart-btn");
-    if(db) db.onclick=(e)=>{ e.stopPropagation(); tap(); lockTrip(legResults, walkMin, arrWalkMin); };
+    // Only show when trains exist; hide entirely if no leaveBySec
+    if(leaveBySec!=null){
+      const lv=document.createElement("div");
+      lv.className="leave-line";
+      lv.innerHTML=walkEmoji+" Leave by <b>"+fmtClock(leaveBySec)+"</b>"
+        +' <button id="depart-btn" class="mini-btn">Depart →</button>';
+      box.appendChild(lv);
+      const db=lv.querySelector("#depart-btn");
+      if(db) db.onclick=(e)=>{ e.stopPropagation(); tap(); lockTrip(legResults, walkMin, arrWalkMin); };
+    }
   }
   renderLegs(legResults, box);
   // final walk to destination as its own line (shows even without train data)
