@@ -453,6 +453,7 @@ fr:{0:"Dégagé",1:"Plutôt dégagé",2:"Partiellement nuageux",3:"Couvert",45:"
 const LS_KEY = "roam_v1";
 let S = loadSettings();
 let gpsOrigin=null; // {lat, lon} when "Take me home" is active
+let gpsMatchedIdx=null; // index into S.dests matched by GPS proximity
 function loadSettings(){
   try{
     const raw = localStorage.getItem(LS_KEY);
@@ -818,9 +819,14 @@ function autoLegs(){
 function isSearchMode(){ return S.destIndex>= (S.dests||[]).length; }
 function searchDest(){ return S.searchDest||{}; }
 function getLegs(){
-  if(gpsOrigin&&S.dir==="inbound"){
-    const auto=autoLegs();
-    return auto||[];
+  if(gpsOrigin&&S.dir==="inbound"&&gpsMatchedIdx!=null){
+    // Use matched destination's manual legs if available, else auto
+    const d=S.dests[gpsMatchedIdx]||{};
+    const manual=(d.legs||[]).filter(l=>l&&l.from&&l.to)
+      .map(l=>({lines:Array.isArray(l.lines)&&l.lines.length?l.lines.slice():(l.line?[l.line]:[]), from:l.from, to:l.to, kind:"ride"}));
+    if(manual.length){
+      return manual.slice().reverse().map(l=>({lines:l.lines, from:l.to, to:l.from, kind:"ride"}));
+    }
   }
   if(!isSearchMode()){
     const d=S.dests[S.destIndex]||{};
@@ -1558,8 +1564,12 @@ async function loadAll(){
         let legResults=await computeRoute(legs);
         let walkMin=null;
         const dCur=destInfoRaw();
-        if(S.dir==="outbound"){ if(dCur.walkMin!=null) walkMin=dCur.walkMin; }
-        else{ if(dCur.walkDestMin!=null) walkMin=dCur.walkDestMin; }
+        // When GPS "Take me home" is active, origin walk is always auto from GPS location
+        // (user is at GPS coords, not the saved address)
+        if(!gpsOrigin){
+          if(S.dir==="outbound"){ if(dCur.walkMin!=null) walkMin=dCur.walkMin; }
+          else{ if(dCur.walkDestMin!=null) walkMin=dCur.walkDestMin; }
+        }
         if(walkMin==null){
           try{
             const bs=ST_BY_ID[legResults[0].leg.from];
@@ -1994,7 +2004,18 @@ function takeMeHome(){
   if(btn){ btn.disabled=true; btn.textContent="📍 ..."; }
   navigator.geolocation.getCurrentPosition(
     (pos)=>{
-      gpsOrigin={lat:pos.coords.latitude, lon:pos.coords.longitude, name:t("current_location")};
+      const glat=pos.coords.latitude, glon=pos.coords.longitude;
+      gpsOrigin={lat:glat, lon:glon, name:t("current_location")};
+      // Find nearest saved destination within 1km to reuse its manual legs/walk
+      gpsMatchedIdx=null;
+      let bestD=1.0;
+      (S.dests||[]).forEach((d,i)=>{
+        if(d.lat!=null&&d.lon!=null){
+          const dd=havKm(glat,glon,d.lat,d.lon);
+          if(dd<bestD){ bestD=dd; gpsMatchedIdx=i; }
+        }
+      });
+      if(gpsMatchedIdx!=null) S.destIndex=gpsMatchedIdx;
       S.dir="inbound";
       S.searchActive=false;
       viewingAlt=null;
@@ -2010,7 +2031,7 @@ function takeMeHome(){
   );
 }
 function clearGpsOrigin(){
-  if(gpsOrigin){ gpsOrigin=null; }
+  gpsOrigin=null; gpsMatchedIdx=null;
 }
 function syncDirToggle(){
   document.querySelectorAll("#dir-toggle2 .seg-btn").forEach(x=>{
