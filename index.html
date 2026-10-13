@@ -1324,7 +1324,36 @@ async function renderAltDetail(opt){
   const now=Math.floor(Date.now()/1000);
   const res=await computeRoute(opt.legs, now+opt.walkMin*60);
   if(res[0]&&res[0].trip){
+    // Leave by: first train boarding time minus walk to station
+    const firstBt=res[0].trip.bt;
+    if(firstBt){
+      const lv=document.createElement("div");
+      lv.className="leave-line";
+      lv.innerHTML="\uD83D\uDEB6 Leave by <b>"+fmtClock(firstBt-opt.walkMin*60)+"</b>";
+      box.appendChild(lv);
+    }
     renderLegs(res, box);
+    // Arrive by: last arrival + final walk to destination
+    const lastTrip=res[res.length-1].trip;
+    if(lastTrip&&lastTrip.at){
+      let destWalkMin=null;
+      const dCur=S.dests[S.destIndex]||{};
+      if(S.dir==="outbound"){ if(dCur.walkDestMin!=null) destWalkMin=dCur.walkDestMin; }
+      else{ if(dCur.walkMin!=null) destWalkMin=dCur.walkMin; }
+      if(destWalkMin==null){
+        try{
+          const dest=destInfo();
+          const ls=ST_BY_ID[res[res.length-1].leg.to];
+          if(dest.lat!=null&&dest.lon!=null&&ls) destWalkMin=await walkMinutes(ls.lat,ls.lon,dest.lat,dest.lon);
+        }catch(e){}
+      }
+      if(destWalkMin!=null){
+        const av=document.createElement("div");
+        av.className="leave-line";
+        av.innerHTML=(S.dir==="inbound"?"\uD83C\uDFE0":"\uD83C\uDFE2")+" Arrive by <b>"+fmtClock(lastTrip.at+destWalkMin*60)+"</b>";
+        box.appendChild(av);
+      }
+    }
   }else{
     const d=document.createElement("div");
     d.className="leg-sub";
