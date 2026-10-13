@@ -927,15 +927,21 @@ async function findFastRoutes(legResults){
     const last=res[res.length-1];
     if(!(last&&last.trip&&last.trip.at&&res.every(r=>r.trip))) return null;
     // include final walk to destination for fair comparison with main route
+    // prefer manual walk times, same as renderAltDetail
     let walkTailMin=0;
-    try{
-      const dest=destInfo();
-      const ls=ST_BY_ID[last.leg.to];
-      if(dest.lat!=null&&dest.lon!=null&&ls){
-        const wm=await walkMinutes(ls.lat,ls.lon,dest.lat,dest.lon);
-        if(wm!=null) walkTailMin=wm;
-      }
-    }catch(e){}
+    const dCur=destInfoRaw();
+    if(S.dir==="outbound"&&dCur.walkDestMin!=null) walkTailMin=dCur.walkDestMin;
+    else if(S.dir==="inbound"&&dCur.walkMin!=null) walkTailMin=dCur.walkMin;
+    else{
+      try{
+        const dest=destInfo();
+        const ls=ST_BY_ID[last.leg.to];
+        if(dest.lat!=null&&dest.lon!=null&&ls){
+          const wm=await walkMinutes(ls.lat,ls.lon,dest.lat,dest.lon);
+          if(wm!=null) walkTailMin=wm;
+        }
+      }catch(e){}
+    }
     return {arrivalSec:last.trip.at+walkTailMin*60, walkTailMin:walkTailMin};
   }
   for(const c of short){
@@ -1381,7 +1387,7 @@ async function renderAltDetail(opt){
   const h=document.createElement("div");
   h.className="leg-head";
   h.style.marginBottom="4px";
-  h.innerHTML=t("alt_route")+" "+opt.legs.map(l=>lineBadge(l.line)).join("");
+  h.innerHTML=t("alt_route")+' <span style="margin-left:6px">'+opt.legs.map(l=>lineBadge(l.line)).join("")+'</span>';
   box.appendChild(h);
 
   const o=originInfo();
