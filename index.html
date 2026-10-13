@@ -1897,6 +1897,19 @@ function updateDestToggle(){
   if(!wrap) return;
   wrap.innerHTML="";
   const n=(S.dests||[]).length;
+  const sb=document.createElement("button");
+  sb.className="seg-btn"+(isSearchMode()?" sel":"");
+  sb.textContent="\uD83D\uDD0D";
+  sb.onclick=()=>{ tap();
+    if(!isSearchMode()){
+      S.destIndex=n;
+      S.dir="outbound";
+      clearGpsOrigin();
+      unlockTripSilent(); saveSettings();
+      updateDestToggle(); syncSearchBar(); loadAll();
+    }
+  };
+  wrap.appendChild(sb);
   for(let i=0;i<n;i++){
     const d=S.dests[i]||{};
     const b=document.createElement("button");
@@ -1913,19 +1926,6 @@ function updateDestToggle(){
     };
     wrap.appendChild(b);
   }
-  const sb=document.createElement("button");
-  sb.className="seg-btn"+(isSearchMode()?" sel":"");
-  sb.textContent="\uD83D\uDD0D";
-  sb.onclick=()=>{ tap();
-    if(!isSearchMode()){
-      S.destIndex=n;
-      S.dir="outbound";
-      clearGpsOrigin();
-      unlockTripSilent(); saveSettings();
-      updateDestToggle(); syncSearchBar(); loadAll();
-    }
-  };
-  wrap.appendChild(sb);
   syncDirToggle();
 }
 /* select-all on focus for numeric text inputs (iOS Safari: type=number ignores select()) */
