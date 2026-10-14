@@ -209,6 +209,8 @@ button{font:inherit;}
     <div class="f-label" id="lbl-dest">Destinations</div>
     <div class="small" id="lbl-dest-hint" style="margin-bottom:8px">Three places you go often. Routes are found automatically.</div>
     <div id="dest-list"></div>
+    <div class="f-label" id="lbl-walkspeed" style="margin-top:12px">Walking speed (km/h)</div>
+    <input class="f-input" id="set-walkspeed" type="text" inputmode="decimal" placeholder="4" autocomplete="off" style="margin-bottom:4px">
     <button class="btn primary block" id="set-save">Save</button>
     <div class="small" style="margin-top:8px" id="lbl-note">Addresses are geocoded once and stored on this device only.</div>
   </div>
@@ -239,7 +241,8 @@ const DEFAULTS = {
   searchDest:{name:"", label:"", lat:null, lon:null, legs:[]},
   destIndex:0,
   dir:"outbound",
-  lang:"en"
+  lang:"en",
+  walkSpeed:4
 };
 
 /* ===== i18n ===== */
@@ -259,7 +262,7 @@ settings_title:"StandClear settings",done:"Done",language:"Language",
 home_address:"Home address",work_address:"Work address",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",destinations:"Destinations",dest_hint:"Three places you go often. Routes are found automatically.",dest_n:"Destination {n}",dest_name_ph:"Name (e.g. Studio, Client office)",dest_ph:"Address",walk_time:"Walk time (minutes)",walk_auto:"Auto",lines_hint:"Tap to pick lines — all selected = first train wins",add_dest:"Add destination",geo_fail:"Could not locate address for Destination {n}. Try selecting from the dropdown.",walk_time_home:"Walk: home \u2194 station (min)",walk_time_dest:"Walk: destination \u2194 station (min)",dest_place:"destination",search_mode:"Search mode",search_mode_hint:"Pick this tab to search any destination on the fly.",route_legs:"Route legs",legs_hint:"Optional — leave empty to auto-find.",leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"\u00D7 Remove",add_leg:"+ Add leg",max_legs:"Max 4 legs",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"Route legs",legs_hint:"One per train — no transfer? Just use one leg.",
 leg_n:"Leg {n}",board:"Board",get_off:"Get off",remove:"× Remove",add_leg:"+ Add leg",
-save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",tt_no_further:"No further trains in real-time feed",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
+save:"Save",saving:"Saving…",addr_note:"Addresses are geocoded once and stored on this device only.",walk_time:"Walk time (minutes)",walk_speed:"Walking speed (km/h)",walk_hint:"How long it takes you to walk to the first station. Leave blank to auto-calculate.",walk_auto:"Auto",walk_from_home:"Home → station",walk_from_work:"Work → station",tt_prev:"Previous",tt_no_further:"No further trains in real-time feed",planned_work:"Planned work",tomorrow:"Tomorrow",today:"Today",
 max_legs:"Maximum 4 legs.",station_ph:"Type station name…",
 to_work:"To Work",to_home:"To Home",take_me_home:"Take me home",current_location:"Current location",gps_unavailable:"Location not available",gps_denied:"Location permission denied",to_prefix:"To ",to_dest:"Dest",clothing_hot:"Tank top, shorts",clothing_warm:"T-shirt",clothing_mild:"Shirt",clothing_cool:"Light jacket",clothing_chilly:"Jacket",clothing_cold:"Coat, scarf",clothing_vcold:"Heavy coat, scarf",clothing_freezing:"Padded coat, scarf, gloves",your_route:"Your route",alternatives:"Alternatives",
 wind:"Wind",rain:"Rain",home:"home",work:"work",
@@ -291,7 +294,7 @@ settings_title:"출퇴근 설정",done:"완료",language:"언어",
 home_address:"집 주소",work_address:"직장 주소",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"경로 구간",legs_hint:"타는 열차마다 하나씩 — 환승 없으면 1개만.",
 leg_n:"구간 {n}",board:"탑승",get_off:"하차",remove:"× 삭제",add_leg:"+ 구간 추가",
-save:"저장",saving:"저장 중…",addr_note:"주소는 한 번만 변환되어 이 기기에만 저장됩니다.",walk_time:"도보 시간 (분)",walk_hint:"첫 역까지 걸리는 시간. 비워두면 자동 계산됩니다.",walk_auto:"자동",walk_from_home:"집 → 지하철역",walk_from_work:"회사 → 지하철역",tt_prev:"이전 열차",tt_no_further:"실시간 데이터에 다음 열차 없음",planned_work:"예정된 공사",tomorrow:"내일",today:"오늘",
+save:"저장",saving:"저장 중…",addr_note:"주소는 한 번만 변환되어 이 기기에만 저장됩니다.",walk_time:"도보 시간 (분)",walk_speed:"걸음 속도 (km/h)",walk_hint:"첫 역까지 걸리는 시간. 비워두면 자동 계산됩니다.",walk_auto:"자동",walk_from_home:"집 → 지하철역",walk_from_work:"회사 → 지하철역",tt_prev:"이전 열차",tt_no_further:"실시간 데이터에 다음 열차 없음",planned_work:"예정된 공사",tomorrow:"내일",today:"오늘",
 max_legs:"최대 4개 구간.",station_ph:"역 이름 입력…",
 to_work:"출근",to_home:"퇴근",take_me_home:"집으로",current_location:"현재 위치",gps_unavailable:"위치를 사용할 수 없음",gps_denied:"위치 권한이 거부됨",your_route:"내 경로",alternatives:"대체 경로",
 wind:"바람",rain:"강수",home:"집",work:"직장",
@@ -323,7 +326,7 @@ settings_title:"通勤设置",done:"完成",language:"语言",
 home_address:"家庭地址",work_address:"工作地址",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"路线段",legs_hint:"每乘一趟车一段 — 不换乘？只用一段。",
 leg_n:"第 {n} 段",board:"上车",get_off:"下车",remove:"× 删除",add_leg:"+ 添加路段",
-save:"保存",saving:"保存中…",addr_note:"地址仅转换一次，只保存在此设备上。",walk_time:"步行时间（分钟）",walk_hint:"步行到第一站的时间。留空则自动计算。",walk_auto:"自动",walk_from_home:"家 → 地铁站",walk_from_work:"公司 → 地铁站",tt_prev:"上一班",tt_no_further:"实时数据中无更多列车",planned_work:"计划施工",tomorrow:"明天",today:"今天",
+save:"保存",saving:"保存中…",addr_note:"地址仅转换一次，只保存在此设备上。",walk_time:"步行时间（分钟）",walk_speed:"步行速度 (km/h)",walk_hint:"步行到第一站的时间。留空则自动计算。",walk_auto:"自动",walk_from_home:"家 → 地铁站",walk_from_work:"公司 → 地铁站",tt_prev:"上一班",tt_no_further:"实时数据中无更多列车",planned_work:"计划施工",tomorrow:"明天",today:"今天",
 max_legs:"最多 4 段。",station_ph:"输入车站名称…",
 to_work:"上班",to_home:"下班",take_me_home:"回家",current_location:"当前位置",gps_unavailable:"无法获取位置",gps_denied:"位置权限被拒绝",your_route:"我的路线",alternatives:"备选路线",
 wind:"风",rain:"降水",home:"家",work:"公司",
@@ -355,7 +358,7 @@ settings_title:"通勤設定",done:"完了",language:"言語",
 home_address:"自宅住所",work_address:"職場住所",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"経路区間",legs_hint:"乗る電車ごとに1区間 — 乗換なしなら1区間だけ。",
 leg_n:"区間 {n}",board:"乗車",get_off:"下車",remove:"× 削除",add_leg:"+ 区間を追加",
-save:"保存",saving:"保存中…",addr_note:"住所は一度だけ変換され、このデバイスにのみ保存されます。",walk_time:"徒歩時間（分）",walk_hint:"最初の駅までの徒歩時間。空欄で自動計算。",walk_auto:"自動",walk_from_home:"自宅 → 駅",walk_from_work:"職場 → 駅",tt_prev:"前の列車",tt_no_further:"リアルタイムデータに次の列車なし",planned_work:"工事予定",tomorrow:"明日",today:"今日",
+save:"保存",saving:"保存中…",addr_note:"住所は一度だけ変換され、このデバイスにのみ保存されます。",walk_time:"徒歩時間（分）",walk_speed:"歩行速度 (km/h)",walk_hint:"最初の駅までの徒歩時間。空欄で自動計算。",walk_auto:"自動",walk_from_home:"自宅 → 駅",walk_from_work:"職場 → 駅",tt_prev:"前の列車",tt_no_further:"リアルタイムデータに次の列車なし",planned_work:"工事予定",tomorrow:"明日",today:"今日",
 max_legs:"最大4区間。",station_ph:"駅名を入力…",
 to_work:"出勤",to_home:"帰宅",take_me_home:"家に帰る",current_location:"現在地",gps_unavailable:"位置情報を取得できません",gps_denied:"位置情報の許可が拒否されました",your_route:"マイルート",alternatives:"代替ルート",
 wind:"風",rain:"降水",home:"自宅",work:"職場",
@@ -387,7 +390,7 @@ settings_title:"Ajustes de viaje",done:"Listo",language:"Idioma",
 home_address:"Dirección de casa",work_address:"Dirección del trabajo",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"Tramos de ruta",legs_hint:"Uno por tren — ¿sin transbordo? Usa solo uno.",
 leg_n:"Tramo {n}",board:"Subir",get_off:"Bajar",remove:"× Eliminar",add_leg:"+ Añadir tramo",
-save:"Guardar",saving:"Guardando…",addr_note:"Las direcciones se geocodifican una vez y se guardan solo en este dispositivo.",walk_time:"Tiempo a pie (min)",walk_hint:"Cuánto tardas a pie hasta la primera estación. Déjalo en blanco para cálculo automático.",walk_auto:"Auto",walk_from_home:"Casa → estación",walk_from_work:"Trabajo → estación",tt_prev:"Anterior",tt_no_further:"Sin más trenes en datos en tiempo real",planned_work:"Obra planificada",tomorrow:"Mañana",today:"Hoy",
+save:"Guardar",saving:"Guardando…",addr_note:"Las direcciones se geocodifican una vez y se guardan solo en este dispositivo.",walk_time:"Tiempo a pie (min)",walk_speed:"Velocidad a pie (km/h)",walk_hint:"Cuánto tardas a pie hasta la primera estación. Déjalo en blanco para cálculo automático.",walk_auto:"Auto",walk_from_home:"Casa → estación",walk_from_work:"Trabajo → estación",tt_prev:"Anterior",tt_no_further:"Sin más trenes en datos en tiempo real",planned_work:"Obra planificada",tomorrow:"Mañana",today:"Hoy",
 max_legs:"Máximo 4 tramos.",station_ph:"Escribe el nombre de la estación…",
 to_work:"Al trabajo",to_home:"A casa",take_me_home:"Ir a casa",current_location:"Ubicación actual",gps_unavailable:"Ubicación no disponible",gps_denied:"Permiso de ubicación denegado",your_route:"Tu ruta",alternatives:"Alternativas",
 wind:"Viento",rain:"Lluvia",home:"casa",work:"trabajo",
@@ -419,7 +422,7 @@ settings_title:"Réglages du trajet",done:"OK",language:"Langue",
 home_address:"Adresse du domicile",work_address:"Adresse du travail",home_ph:"e.g. 123 Main St, Brooklyn NY 11238",work_ph:"e.g. 456 Broadway, Brooklyn NY 11206",
 route_legs:"Segments du trajet",legs_hint:"Un par train — sans correspondance ? Un seul suffit.",
 leg_n:"Segment {n}",board:"Embarquement",get_off:"Descente",remove:"× Supprimer",add_leg:"+ Ajouter un segment",
-save:"Enregistrer",saving:"Enregistrement…",addr_note:"Les adresses sont géocodées une fois et stockées uniquement sur cet appareil.",walk_time:"Temps de marche (min)",walk_hint:"Temps de marche jusqu'à la première station. Laisser vide pour calcul auto.",walk_auto:"Auto",walk_from_home:"Domicile → station",walk_from_work:"Travail → station",tt_prev:"Précédent",tt_no_further:"Aucun train suivant dans les données temps réel",planned_work:"Travaux prévus",tomorrow:"Demain",today:"Aujourd'hui",
+save:"Enregistrer",saving:"Enregistrement…",addr_note:"Les adresses sont géocodées une fois et stockées uniquement sur cet appareil.",walk_time:"Temps de marche (min)",walk_speed:"Vitesse de marche (km/h)",walk_hint:"Temps de marche jusqu'à la première station. Laisser vide pour calcul auto.",walk_auto:"Auto",walk_from_home:"Domicile → station",walk_from_work:"Travail → station",tt_prev:"Précédent",tt_no_further:"Aucun train suivant dans les données temps réel",planned_work:"Travaux prévus",tomorrow:"Demain",today:"Aujourd'hui",
 max_legs:"4 segments maximum.",station_ph:"Nom de la station…",
 to_work:"Aller au travail",to_home:"Rentrer",take_me_home:"Rentrer à la maison",current_location:"Position actuelle",gps_unavailable:"Position non disponible",gps_denied:"Permission de localisation refusée",your_route:"Votre trajet",alternatives:"Alternatives",
 wind:"Vent",rain:"Pluie",home:"domicile",work:"travail",
@@ -551,17 +554,22 @@ async function geocode(label){
 }
 
 /* ===== walk time (OSRM foot, haversine fallback) ===== */
+function walkSpeedKmh(){
+  const v=(typeof S!=="undefined"&&S.walkSpeed)||4;
+  return (v>0&&v<=20)?v:4;
+}
 async function walkMinutes(aLat,aLon,bLat,bLon){
   if(aLat==null||aLon==null||bLat==null||bLon==null) return null;
+  const ws=walkSpeedKmh();
   try{
     const u="https://router.project-osrm.org/route/v1/foot/"+aLon+","+aLat+";"+bLon+","+bLat+"?overview=false";
     const r=await fetch(u);
     const j=await r.json();
     // NOTE: the public OSRM demo server sometimes returns car-like durations
     // for the foot profile, so derive walk time from route distance instead.
-    if(j.routes&&j.routes[0]&&j.routes[0].distance) return (j.routes[0].distance/1000)/4*60;
+    if(j.routes&&j.routes[0]&&j.routes[0].distance) return (j.routes[0].distance/1000)/ws*60;
   }catch(e){}
-  return havKm(aLat,aLon,bLat,bLon)*1.3/4*60;
+  return havKm(aLat,aLon,bLat,bLon)*1.3/ws*60;
 }
 
 /* ===== weather (Open-Meteo) ===== */
@@ -1002,7 +1010,7 @@ async function findFastRoutes(legResults){
     return {arrivalSec:last.trip.at+walkTailMin*60, walkTailMin:walkTailMin};
   }
   for(const c of short){
-    const walkMin=Math.max(1,Math.round(c.d/4*60));
+    const walkMin=Math.max(1,Math.round(c.d/walkSpeedKmh()*60));
     const after=now+walkMin*60;
     for(const line of c.lines){
       if(!feeds[FEED_FOR[line]]) continue;
@@ -1940,6 +1948,7 @@ function applyI18n(){
   $("lbl-home").textContent=t("home_address");
   $("lbl-dest").textContent=t("destinations");
   $("lbl-dest-hint").textContent=t("dest_hint");
+  const lws=$("lbl-walkspeed"); if(lws) lws.textContent=t("walk_speed");
   $("set-home").placeholder=t("home_ph");
   $("set-save").textContent=t("save");
   $("lbl-note").textContent=t("addr_note");
@@ -1982,12 +1991,13 @@ function selectAllOnFocus(el){
 }
 function initSettings(){
   $("set-home").value=S.home.label||"";
+  const ws=$("set-walkspeed"); if(ws) ws.value=(S.walkSpeed!=null?S.walkSpeed:4);
   $("set-home").dataset.lat=S.home.lat||"";
   $("set-home").dataset.lon=S.home.lon||"";
   attachAddrAC("set-home","home-ac");
   applyI18n();
   $("sheet-close").onclick=()=>{ $("sheet").classList.remove("open"); };
-  $("settings-btn").onclick=()=>{ tap(); $("sheet").classList.add("open"); };
+  $("settings-btn").onclick=()=>{ tap(); const ws=$("set-walkspeed"); if(ws) ws.value=(S.walkSpeed!=null?S.walkSpeed:4); $("sheet").classList.add("open"); };
   $("refresh-btn").onclick=()=>{ tap(); const rb=$("refresh-btn"); rb.classList.add("spinning"); loadAll().finally(()=>rb.classList.remove("spinning")); };
   $("sheet").addEventListener("click",e=>{ if(e.target===$("sheet")) $("sheet").classList.remove("open"); });
   $("set-save").onclick=async ()=>{
@@ -2028,6 +2038,14 @@ function initSettings(){
           if(wdi){ const pv=parseInt(wdi.value,10); wdv=isNaN(pv)?null:Math.min(120,Math.max(1,pv)); }
         }
         S.dests[i]={name:nm, label:label, lat:lat, lon:lon, legs:prevLegs, walkMin:wv, walkDestMin:wdv};
+      }
+      // Walking speed
+      {
+        const wse=$("set-walkspeed");
+        if(wse){
+          const pv=parseFloat(wse.value);
+          S.walkSpeed=(!isNaN(pv)&&pv>0&&pv<=20)?Math.round(pv*10)/10:4;
+        }
       }
       saveSettings();
       updateDestToggle();
