@@ -1326,7 +1326,7 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked, arriveDestEst){
         const btn=document.createElement("button");
         btn.className="seg-btn"+(i===departIdx?" sel":"");
         const durMin=(opt.arriveDest!=null)?Math.round((opt.arriveDest-opt.leaveBy)/60):null;
-        btn.textContent=fmtClockShort(opt.leaveBy)+"-"+(opt.arriveDest!=null?fmtClockShort(opt.arriveDest):"")+(durMin!=null?" ("+durMin+"min)":"");
+        btn.textContent=fmtClockShort(opt.leaveBy)+"-"+(opt.arriveDest!=null?(opt.arriveEst?"~":"")+fmtClockShort(opt.arriveDest):"")+(durMin!=null?" ("+durMin+"min)":"");
         btn.onclick=(e)=>{ e.stopPropagation(); tap(); selectDepartOption(i, walkMin, arrWalkMin); };
         seg.appendChild(btn);
       });
@@ -1361,7 +1361,8 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked, arriveDestEst){
   if(arriveBy!=null){
     const av=document.createElement("div");
     av.className="leave-line";
-    av.innerHTML=(((gpsToDest==null)&&(S.dir==="inbound"||gpsOrigin))?"🏠":"🏢")+" Arrive by <b>"+fmtClock(arriveBy)+"</b>";
+    const isEst=arriveDestEst!=null&&!(legResults.length&&legResults[legResults.length-1].trip&&legResults[legResults.length-1].trip.at);
+    av.innerHTML=(((gpsToDest==null)&&(S.dir==="inbound"||gpsOrigin))?"🏠":"🏢")+" Arrive by <b>"+(isEst?"~":"")+fmtClock(arriveBy)+"</b>";
     box.appendChild(av);
   }
 }
@@ -1657,17 +1658,18 @@ async function loadAll(){
               const lastTrip=lr[lr.length-1]&&lr[lr.length-1].trip;
               const walkTail=(arrWalkMin!=null?arrWalkMin*60:0);
               let arriveDest=(lastTrip&&lastTrip.at)?lastTrip.at+walkTail:null;
+              let arriveEst=false;
               if(arriveDest==null){
                 // Fallback: estimate from main route's train travel duration
                 const mainLast=legResults[legResults.length-1]&&legResults[legResults.length-1].trip;
                 const mainFirst=legResults[0]&&legResults[0].trip;
                 if(mainLast&&mainLast.at&&mainFirst&&mainFirst.bt){
                   const mainDur=mainLast.at-mainFirst.bt;
-                  if(mainDur>0) arriveDest=at.bt+mainDur+walkTail;
+                  if(mainDur>0){ arriveDest=at.bt+mainDur+walkTail; arriveEst=true; }
                 }
               }
               const lb=(walkMin!=null?at.bt-walkMin*60:at.bt);
-              departOptionsCache.push({leaveBy:lb, trainBt:at.bt, arriveDest:arriveDest, legResults:lr});
+              departOptionsCache.push({leaveBy:lb, trainBt:at.bt, arriveDest:arriveDest, arriveEst:arriveEst, legResults:lr});
             }
           }
           if(departOptionsCache.length){
