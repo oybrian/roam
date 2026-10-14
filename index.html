@@ -922,8 +922,8 @@ async function computeRoute(legs, startAfter){
   for(let li=0; li<legs.length; li++){
     const leg=legs[li];
     const lines=legLines(leg);
-    // transfers need a 3-min buffer to physically change trains
-    const effAfter=(li>0&&strict)?after+180:after;
+    // transfers need a 1-min buffer to physically change trains
+    const effAfter=(li>0&&strict)?after+60:after;
     let allTrips=[];
     let feedOk=false;
     for(const ln of lines){
