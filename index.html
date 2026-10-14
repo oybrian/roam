@@ -957,6 +957,8 @@ async function findFastRoutes(legResults){
   const sameNameIds=name=>[...new Set(STATIONS.filter(s=>s.name===name).map(s=>s.id))].slice(0,3);
   const destIds=sameNameIds(stationName(legs[legs.length-1].to));
   const normalSig=legs.map(l=>l.line+":"+l.from+">"+l.to).join("|");
+  // If primary has no trains at all, we need ANY route with service, not just "faster"
+  const noTrainsPrimary=legResults.some(r=>!r.trip&&r.feedOk);
   // rejoin the remaining route only if all of it is running fine
   const tail=legs.slice(1);
   const tailGreen=tail.length>0&&tail.every(l=>statusOf(l.line).cls==="green");
@@ -964,13 +966,15 @@ async function findFastRoutes(legResults){
   const cands=[];
   for(const s of STATIONS){
     const d=havKm(o.lat,o.lon,s.lat,s.lon);
-    if(d>1.8||d<0.05) continue;
-    const good=s.lines.filter(l=>statusOf(l).cls==="green");
+    if(d>2.5||d<0.05) continue;
+    // When primary has no service, try all lines (we need ANY working route)
+    // Otherwise, only consider lines with good status
+    const good=noTrainsPrimary?s.lines:s.lines.filter(l=>statusOf(l).cls==="green");
     if(!good.length) continue;
-    cands.push({s:s, d:d, lines:good.slice(0,2)});
+    cands.push({s:s, d:d, lines:good.slice(0,3)});
   }
   cands.sort((a,b)=>a.d-b.d);
-  const short=cands.slice(0,8);
+  const short=cands.slice(0,12);
   const allLines=[...new Set(short.flatMap(c=>c.lines).concat(legs.map(l=>l.line)))];
   const feeds=await fetchFeeds(allLines);
   const now=Math.floor(Date.now()/1000);
