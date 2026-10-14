@@ -1605,9 +1605,13 @@ async function loadAll(){
         let legResults=await computeRoute(legs);
         let walkMin=null;
         const dCur=destInfoRaw();
-        // When GPS "Take me home" is active, origin walk is always auto from GPS location
-        // (user is at GPS coords, not the saved address)
-        if(!gpsOrigin){
+        // When GPS "Take me home" is active at a matched destination, use manual walk reversed
+        // (dest->station = walkDestMin). Otherwise auto from GPS location.
+        if(gpsOrigin&&S.dir==="inbound"&&gpsMatchedIdx!=null){
+          const md=S.dests[gpsMatchedIdx]||{};
+          if(md.walkDestMin!=null) walkMin=md.walkDestMin;
+        }
+        if(walkMin==null&&!gpsOrigin){
           if(S.dir==="outbound"){ if(dCur.walkMin!=null) walkMin=dCur.walkMin; }
           else{ if(dCur.walkDestMin!=null) walkMin=dCur.walkDestMin; }
         }
