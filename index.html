@@ -176,6 +176,7 @@ button{font:inherit;}
       <button id="take-me-home-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me home"></button>
       <button id="take-me-dest-0-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 1"></button>
       <button id="take-me-dest-1-btn" class="btn" style="flex:1; margin-bottom:0" title="Take me to Destination 2"></button>
+      <button id="take-me-search-btn" class="btn" style="flex:1; margin-bottom:0" title="Search from here">🔍</button>
     </div>
     <div id="search-bar" style="display:none">
       <div class="pick-wrap">
@@ -467,6 +468,7 @@ const LS_KEY = "roam_v1";
 let S = loadSettings();
 let gpsOrigin=null; // {lat, lon} when "Take me home" is active
 let gpsToDest=null; // dest index when GPS->destination mode is active
+let gpsSearch=false; // true when GPS->search mode is active
 let gpsMatchedIdx=null; // index into S.dests matched by GPS proximity
 function loadSettings(){
   try{
@@ -833,6 +835,30 @@ function autoLegs(){
 function isSearchMode(){ return S.destIndex>= (S.dests||[]).length; }
 function searchDest(){ return S.searchDest||{}; }
 function getLegs(){
+  if(gpsOrigin&&gpsToDest!=null){
+    // GPS -> saved destination: use destination's manual legs if set (adapted for GPS origin)
+    const d=S.dests[gpsToDest]||{};
+    const manual=(d.legs||[]).filter(l=>l&&l.from&&l.to)
+      .map(l=>({lines:Array.isArray(l.lines)&&l.lines.length?l.lines.slice():(l.line?[l.line]:[]), from:l.from, to:l.to, kind:"ride"}));
+    if(manual.length){
+      // Adapt first leg: nearest station to GPS serving the first line
+      const firstLine=manual[0].lines[0];
+      let bestSt=null, bestD=1e9;
+      if(firstLine){
+        for(const s of STATIONS){
+          if(!(s.lines||[]).includes(firstLine)) continue;
+          const dd=havKm(gpsOrigin.lat, gpsOrigin.lon, s.lat, s.lon);
+          if(dd<bestD){ bestD=dd; bestSt=s; }
+        }
+      }
+      const adapted=manual.map((l,i)=>{
+        if(i===0&&bestSt) return {lines:l.lines, from:bestSt.id, to:l.to, kind:"ride"};
+        return l;
+      });
+      return adapted;
+    }
+    // No manual legs: fall through to auto
+  }
   if(gpsOrigin&&S.dir==="inbound"&&gpsMatchedIdx!=null){
     // Use matched destination's manual legs if available, else auto
     const d=S.dests[gpsMatchedIdx]||{};
@@ -855,7 +881,7 @@ function getLegs(){
   return auto||[];
 }
 function originInfo(){
-  if(gpsOrigin&&(S.dir==="inbound"||gpsToDest!=null)) return gpsOrigin;
+  if(gpsOrigin&&(S.dir==="inbound"||gpsToDest!=null||gpsSearch)) return gpsOrigin;
   return S.dir==="inbound" ? destInfoRaw() : S.home;
 }
 function destInfoRaw(){
@@ -1897,19 +1923,6 @@ function updateDestToggle(){
   if(!wrap) return;
   wrap.innerHTML="";
   const n=(S.dests||[]).length;
-  const sb=document.createElement("button");
-  sb.className="seg-btn"+(isSearchMode()?" sel":"");
-  sb.textContent="\uD83D\uDD0D";
-  sb.onclick=()=>{ tap();
-    if(!isSearchMode()){
-      S.destIndex=n;
-      S.dir="outbound";
-      clearGpsOrigin();
-      unlockTripSilent(); saveSettings();
-      updateDestToggle(); syncSearchBar(); loadAll();
-    }
-  };
-  wrap.appendChild(sb);
   for(let i=0;i<n;i++){
     const d=S.dests[i]||{};
     const b=document.createElement("button");
@@ -2054,7 +2067,40 @@ function takeMeHome(){
   );
 }
 function clearGpsOrigin(){
-  gpsOrigin=null; gpsMatchedIdx=null; gpsToDest=null;
+  gpsOrigin=null; gpsMatchedIdx=null; gpsToDest=null; gpsSearch=false;
+}
+// Take me to a searched destination from current GPS location
+function takeMeToSearch(){
+  tap();
+  if(!navigator.geolocation){
+    showErr(t("gps_unavailable"));
+    return;
+  }
+  const btn=$("take-me-search-btn");
+  if(btn){ btn.disabled=true; }
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{
+      const glat=pos.coords.latitude, glon=pos.coords.longitude;
+      gpsOrigin={lat:glat, lon:glon, name:t("current_location")};
+      gpsSearch=true;
+      gpsToDest=null;
+      S.dir="outbound";
+      S.searchActive=true;
+      viewingAlt=null;
+      if(btn){ btn.disabled=false; }
+      saveSettings();
+      syncSearchBar();
+      loadAll();
+      // Focus search input
+      const si=$("dest-search");
+      if(si) si.focus();
+    },
+    (err)=>{
+      if(btn){ btn.disabled=false; }
+      showErr(t("gps_denied"));
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:60000}
+  );
 }
 // Take me to a saved destination from current GPS location
 function takeMeToDest(idx){
@@ -2191,6 +2237,10 @@ function syncGpsButtons(){
   const d1b=$("take-me-dest-1-btn");
   if(d1b){
     d1b.onclick=()=>{ tap(); takeMeToDest(1); };
+  }
+  const sb=$("take-me-search-btn");
+  if(sb){
+    sb.onclick=()=>{ tap(); takeMeToSearch(); };
   }
   syncGpsButtons();
 })();
