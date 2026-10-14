@@ -1680,10 +1680,26 @@ async function loadAll(){
           }
         }
         const _arrEst=(departOptionsCache[departIdx]&&departOptionsCache[departIdx].arriveDest!=null)?departOptionsCache[departIdx].arriveDest:null;
-        renderRoute(legResults, walkMin, arrWalkMin, false, _arrEst);
         const _noTrains=legResults.some(r=>!r.trip&&r.feedOk);
         const alts=(hasDisruption(legResults)||_noTrains)?await findFastRoutes(legResults):[];
-        renderAlts(alts, legResults, arrWalkMin);
+        // If primary has NO service at all, promote best alternative to main route
+        if(_noTrains&&alts.length>0){
+          const best=alts[0];
+          // Compute full route for the alternative legs
+          const altAfter=Math.floor(Date.now()/1000)+best.walkMin*60;
+          const altResults=await computeRoute(best.legs, altAfter);
+          if(altResults.length&&altResults.every(r=>r.trip)){
+            renderRoute(altResults, best.walkMin, best.walkTailMin, false, null);
+            // Show remaining alternatives (excluding the promoted one)
+            renderAlts(alts.slice(1), altResults, best.walkTailMin);
+          }else{
+            renderRoute(legResults, walkMin, arrWalkMin, false, _arrEst);
+            renderAlts(alts, legResults, arrWalkMin);
+          }
+        }else{
+          renderRoute(legResults, walkMin, arrWalkMin, false, _arrEst);
+          renderAlts(alts, legResults, arrWalkMin);
+        }
       }
       $("updated").textContent=t("updated",{time:fmtHM()});
     }
