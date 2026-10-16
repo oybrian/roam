@@ -528,6 +528,12 @@ function stopSet(stationId){
   return set;
 }
 function showErr(msg){ const e=$("err"); e.style.display=msg?"block":"none"; e.textContent=msg||""; }
+function showAlreadyHere(){
+  showErr(t("already_here"));
+  const hr=$("h-route"); if(hr) hr.style.display="none";
+  const legs=$("legs"); if(legs){ legs.innerHTML=""; legs.style.display="none"; }
+  const tierAlt=$("tier-alt"); if(tierAlt) tierAlt.style.display="none";
+}
 
 /* ===== geocode (Nominatim, cached) ===== */
 const GEO_KEY="brooklyn_commute_geo_v1";
@@ -1318,6 +1324,8 @@ let departOptionsCache=[];
 let departIdx=0;
 function renderRoute(legResults, walkMin, arrWalkMin, isLocked, arriveDestEst){
   const box=$("legs");
+  box.style.display="";
+  const hr=$("h-route"); if(hr) hr.style.display="";
   box.innerHTML="";
   const walkEmoji=((S.dir==="inbound"||gpsOrigin)&&gpsToDest==null)?"\uD83D\uDD7A":"\uD83D\uDEB6";
   if(isLocked&&lockedPlan){
@@ -2108,7 +2116,7 @@ function takeMeHome(){
         const distToHome=havKm(glat,glon,S.home.lat,S.home.lon);
         if(distToHome<0.2){
           if(btn){ btn.disabled=false; }
-          showErr(t("already_here"));
+          showAlreadyHere();
           return;
         }
       }
@@ -2197,7 +2205,7 @@ function takeMeToDest(idx){
         const distToDest=havKm(glat,glon,dest.lat,dest.lon);
         if(distToDest<0.2){
           if(btn){ btn.disabled=false; }
-          showErr(t("already_here"));
+          showAlreadyHere();
           return;
         }
       }
