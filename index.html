@@ -847,21 +847,38 @@ function getLegs(){
     const manual=(d.legs||[]).filter(l=>l&&l.from&&l.to)
       .map(l=>({lines:Array.isArray(l.lines)&&l.lines.length?l.lines.slice():(l.line?[l.line]:[]), from:l.from, to:l.to, kind:"ride"}));
     if(manual.length){
-      // Adapt first leg: nearest station to GPS serving the first line
-      const firstLine=manual[0].lines[0];
-      let bestSt=null, bestD=1e9;
-      if(firstLine){
-        for(const s of STATIONS){
-          if(!(s.lines||[]).includes(firstLine)) continue;
-          const dd=havKm(gpsOrigin.lat, gpsOrigin.lon, s.lat, s.lon);
-          if(dd<bestD){ bestD=dd; bestSt=s; }
-        }
+      // Join the manual route at the point nearest to GPS. If GPS is near a
+      // later station (e.g. the transfer), drop the earlier legs instead of
+      // showing a zero-length first ride.
+      const JOIN_KM=0.5;
+      let bestJd=1e9, bestJ=0; // bestJ = leg index, +0.5 when nearest point is the leg's "to" station
+      for(let i=0;i<manual.length;i++){
+        const f=ST_BY_ID[manual[i].from], tt=ST_BY_ID[manual[i].to];
+        if(f){ const dd=havKm(gpsOrigin.lat,gpsOrigin.lon,f.lat,f.lon); if(dd<bestJd){bestJd=dd;bestJ=i;} }
+        if(tt){ const dd=havKm(gpsOrigin.lat,gpsOrigin.lon,tt.lat,tt.lon); if(dd<bestJd){bestJd=dd;bestJ=i+0.5;} }
       }
-      const adapted=manual.map((l,i)=>{
-        if(i===0&&bestSt) return {lines:l.lines, from:bestSt.id, to:l.to, kind:"ride"};
-        return l;
-      });
-      return adapted;
+      let adapted=null;
+      if(bestJd<=JOIN_KM){
+        const startIdx=Math.ceil(bestJ);
+        if(startIdx<manual.length) adapted=manual.slice(startIdx);
+        // else GPS is at/near the final station: fall through to auto
+      }else{
+        // Adapt first leg: nearest station to GPS serving the first line
+        const firstLine=manual[0].lines[0];
+        let bestSt=null, bestD=1e9;
+        if(firstLine){
+          for(const s of STATIONS){
+            if(!(s.lines||[]).includes(firstLine)) continue;
+            const dd=havKm(gpsOrigin.lat, gpsOrigin.lon, s.lat, s.lon);
+            if(dd<bestD){ bestD=dd; bestSt=s; }
+          }
+        }
+        adapted=manual.map((l,i)=>{
+          if(i===0&&bestSt) return {lines:l.lines, from:bestSt.id, to:l.to, kind:"ride"};
+          return l;
+        });
+      }
+      if(adapted&&adapted.length) return adapted;
     }
     // No manual legs: fall through to auto
   }
