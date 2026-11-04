@@ -1455,22 +1455,9 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked, arriveDestEst){
         if(tr.bt-mins*60>=nowSec){ leaveBySec=tr.bt-mins*60; break; }
       }
     }
-    // Line 1: departure options toggle (2+ options)
-    if(!isLocked&&departOptionsCache.length>=2){
-      const seg=document.createElement("div");
-      seg.className="seg";
-      seg.id="depart-seg";
-      departOptionsCache.forEach((opt,i)=>{
-        const btn=document.createElement("button");
-        btn.className="seg-btn"+(i===departIdx?" sel":"");
-        const durMin=(opt.arriveDest!=null)?Math.round((opt.arriveDest-opt.leaveBy)/60):null;
-        btn.textContent=fmtClockShort(opt.leaveBy)+"-"+(opt.arriveDest!=null?(opt.arriveEst?"~":"")+fmtClockShort(opt.arriveDest):"")+(durMin!=null?" ("+durMin+"min)":"");
-        btn.onclick=(e)=>{ e.stopPropagation(); tap(); selectDepartOption(i, walkMin, arrWalkMin); };
-        seg.appendChild(btn);
-      });
-      box.appendChild(seg);
-    }
-    // Line 2: Leave by + Depart button (AM/PM on the Leave by time)
+    // (Departure-options toggle removed 2026-11-04 at Brian's request:
+    //  picking a train now happens by tapping rows in the expanded timetable.)
+    // Leave by + Depart button (AM/PM on the Leave by time)
     // Only show when trains exist; hide entirely if no leaveBySec
     if(leaveBySec!=null){
       const lv=document.createElement("div");
