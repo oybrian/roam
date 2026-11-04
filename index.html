@@ -1247,12 +1247,17 @@ function makeTappable(cardEl, key, leg, trip, legIdx, minBt){
    kept in sessionStorage so the 30s auto-refresh (loadAll) re-anchors
    on the same trains. */
 let manualPins={};
+let manualPinSig="";
 let routeCtx=null;
+function legSig(legs){
+  return (legs||[]).map(l=>((legLines(l)[0])||"")+":"+l.from+">"+l.to).join("|");
+}
 function loadManualPins(){
   manualPins={};
   try{
     const saved=JSON.parse(sessionStorage.getItem("roam_pins")||"null");
     if(saved&&saved.destIndex===S.destIndex&&saved.dir===S.dir&&saved.pins){
+      manualPinSig=saved.sig||"";
       const nowSec=Date.now()/1000;
       for(const k in saved.pins){
         const p=saved.pins[k];
@@ -1265,8 +1270,8 @@ function loadManualPins(){
 }
 function saveManualPins(){
   try{
-    if(Object.keys(manualPins).length) sessionStorage.setItem("roam_pins", JSON.stringify({destIndex:S.destIndex, dir:S.dir, pins:manualPins}));
-    else sessionStorage.removeItem("roam_pins");
+    if(Object.keys(manualPins).length) sessionStorage.setItem("roam_pins", JSON.stringify({destIndex:S.destIndex, dir:S.dir, sig:manualPinSig, pins:manualPins}));
+    else { sessionStorage.removeItem("roam_pins"); manualPinSig=""; }
   }catch(e){}
 }
 async function pickTrain(legIdx, bt, line){
@@ -1281,8 +1286,10 @@ async function pickTrain(legIdx, bt, line){
   if(legIdx===0){
     try{ sessionStorage.setItem("roam_depart", JSON.stringify({destIndex:S.destIndex, dir:S.dir, trainBt:bt})); }catch(e){}
   }
-  const legs=getLegs();
+  const legs=routeCtx.legResults.map(r=>r.leg);
   if(!legs.length||legIdx>=legs.length) return;
+  manualPinSig=legSig(legs);
+  saveManualPins();
   const anchorBt=(routeCtx.legResults[0]&&routeCtx.legResults[0].trip)?routeCtx.legResults[0].trip.bt:null;
   const startAfter=(legIdx===0)?bt-1:(anchorBt!=null?anchorBt-1:null);
   const lr=await computeRoute(legs, startAfter, manualPins);
@@ -1812,7 +1819,7 @@ async function loadAll(){
           }
         }
         loadManualPins();
-        if(Object.keys(manualPins).length){
+        if(Object.keys(manualPins).length&&(!manualPinSig||manualPinSig===legSig(legs))){
           const pinned=await computeRoute(legs, (manualPins[0]!=null?Number(manualPins[0].bt)-1:undefined), manualPins);
           let pinOk=pinned.length===legResults.length;
           if(pinOk){
@@ -1845,7 +1852,19 @@ async function loadAll(){
           const best=alts[0];
           // Compute full route for the alternative legs
           const altAfter=Math.floor(Date.now()/1000)+best.walkMin*60;
-          const altResults=await computeRoute(best.legs, altAfter);
+          let altResults=await computeRoute(best.legs, altAfter);
+          if(Object.keys(manualPins).length&&manualPinSig&&manualPinSig===legSig(best.legs)){
+            const pAlt=await computeRoute(best.legs, (manualPins[0]!=null?Number(manualPins[0].bt)-1:altAfter), manualPins);
+            let pOk=pAlt.length===altResults.length;
+            if(pOk){
+              for(const k in manualPins){
+                const pr=pAlt[Number(k)];
+                if(!pr||!pr.trip||Math.abs(pr.trip.bt-Number(manualPins[k].bt))>=120){ pOk=false; break; }
+              }
+            }
+            if(pOk) altResults=pAlt;
+            else { manualPins={}; saveManualPins(); }
+          }
           if(altResults.length&&altResults.every(r=>r.trip)){
             renderRoute(altResults, best.walkMin, best.walkTailMin, false, null);
             // Show remaining alternatives (excluding the promoted one)
