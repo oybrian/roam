@@ -1293,11 +1293,16 @@ async function pickTrain(legIdx, bt, line){
   const anchorBt=(routeCtx.legResults[0]&&routeCtx.legResults[0].trip)?routeCtx.legResults[0].trip.bt:null;
   const startAfter=(legIdx===0)?bt-1:(anchorBt!=null?anchorBt-1:null);
   const lr=await computeRoute(legs, startAfter, manualPins);
-  const got=lr[legIdx]&&lr[legIdx].trip;
+  const gotRes=lr[legIdx];
+  const got=gotRes&&gotRes.trip;
   if(!got||Math.abs(got.bt-bt)>=120){
-    // The tapped train cannot be used (missed connection or it left the feed) — drop the pin instead of pretending.
-    delete manualPins[legIdx];
-    saveManualPins();
+    // Drop the pin only when the feed answered and the train really is not
+    // usable (missed connection / left the feed). If the feed itself failed,
+    // keep the pin — the next refresh can still honor it.
+    if(gotRes&&gotRes.feedOk){
+      delete manualPins[legIdx];
+      saveManualPins();
+    }
   }
   let arriveDest=null;
   if(lr[0]&&lr[0].trip){
@@ -1822,13 +1827,17 @@ async function loadAll(){
         if(Object.keys(manualPins).length&&(!manualPinSig||manualPinSig===legSig(legs))){
           const pinned=await computeRoute(legs, (manualPins[0]!=null?Number(manualPins[0].bt)-1:undefined), manualPins);
           let pinOk=pinned.length===legResults.length;
+          let pinUnknown=false;
           if(pinOk){
             for(const k in manualPins){
               const pr=pinned[Number(k)];
-              if(!pr||!pr.trip||Math.abs(pr.trip.bt-Number(manualPins[k].bt))>=120){ pinOk=false; break; }
+              if(!pr||pr.feedOk===false){ pinUnknown=true; break; }
+              if(!pr.trip||Math.abs(pr.trip.bt-Number(manualPins[k].bt))>=120){ pinOk=false; break; }
             }
           }
-          if(pinOk){
+          if(pinUnknown){
+            // Feed failed this cycle: leave the pins untouched for the next one.
+          }else if(pinOk){
             legResults=pinned;
             if(pinned[0]&&pinned[0].trip){
               const firstBt=pinned[0].trip.bt;
@@ -1856,13 +1865,17 @@ async function loadAll(){
           if(Object.keys(manualPins).length&&manualPinSig&&manualPinSig===legSig(best.legs)){
             const pAlt=await computeRoute(best.legs, (manualPins[0]!=null?Number(manualPins[0].bt)-1:altAfter), manualPins);
             let pOk=pAlt.length===altResults.length;
+            let pUnknown=false;
             if(pOk){
               for(const k in manualPins){
                 const pr=pAlt[Number(k)];
-                if(!pr||!pr.trip||Math.abs(pr.trip.bt-Number(manualPins[k].bt))>=120){ pOk=false; break; }
+                if(!pr||pr.feedOk===false){ pUnknown=true; break; }
+                if(!pr.trip||Math.abs(pr.trip.bt-Number(manualPins[k].bt))>=120){ pOk=false; break; }
               }
             }
-            if(pOk) altResults=pAlt;
+            if(pUnknown){
+              // Feed failed: keep the pins for the next cycle.
+            }else if(pOk) altResults=pAlt;
             else { manualPins={}; saveManualPins(); }
           }
           if(altResults.length&&altResults.every(r=>r.trip)){
