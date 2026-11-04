@@ -89,6 +89,8 @@ button{ -webkit-tap-highlight-color:transparent; }
 .tt-cur{font-weight:700;}
 .tt-tag{color:#8E8E93; font-size:13px;}
 .tt-cur .tt-tag{color:#007AFF;}
+.tt-pick{cursor:pointer; border-radius:8px; padding-left:6px; padding-right:6px; margin-left:-6px; margin-right:-6px; transition:transform .1s ease, background .1s ease;}
+.tt-pick:active{background:var(--press); transform:scale(.98);}
 .planned{background:#FFF9E6; border-radius:14px; padding:12px 14px; margin:10px 0;}
 .planned-head{display:flex; align-items:center; gap:6px; font-weight:700; font-size:15px;}
 .planned-item{margin-top:8px; padding-top:8px; border-top:1px solid rgba(0,0,0,0.08); cursor:pointer;}
@@ -945,7 +947,7 @@ function legLines(leg){
   const st=ST_BY_ID[leg.from];
   return st?(st.lines||[]).slice():[];
 }
-async function computeRoute(legs, startAfter){
+async function computeRoute(legs, startAfter, pins){
   const feeds=await fetchFeeds([...new Set(legs.flatMap(l=>legLines(l)))]);
   const now=Math.floor(Date.now()/1000);
   const out=[];
@@ -954,7 +956,11 @@ async function computeRoute(legs, startAfter){
     const leg=legs[li];
     const lines=legLines(leg);
     // transfers need a 1-min buffer to physically change trains
-    const effAfter=(li>0&&strict)?after+60:after;
+    let effAfter=(li>0&&strict)?after+60:after;
+    // A manually tapped train pins this leg (when the connection is still makeable)
+    const pinRaw=(pins&&pins[li]!=null)?pins[li]:null;
+    const pinBt=(pinRaw!=null)?Number((typeof pinRaw==="object")?pinRaw.bt:pinRaw):null;
+    if(pinBt!=null&&pinBt>=effAfter){ effAfter=pinBt-1; }
     let allTrips=[];
     let feedOk=false;
     for(const ln of lines){
@@ -1161,28 +1167,40 @@ async function legTimetable(leg, dispBt, chosenLine){
   }
   return {prev:prev, next:next};
 }
-function ttHtml(dispBt, tt){
+function ttHtml(dispBt, tt, legIdx, minBt){
+  const nowSec=Date.now()/1000;
+  const pickable=bt=>(bt>=minBt-30&&bt>nowSec-30);
   let h="";
   if(tt&&tt.prev){
-    h+='<div class="tt-row tt-prev">'+(tt.prev.line?lineBadge(tt.prev.line):"")+'<span>'+fmtClock(tt.prev.bt)+'</span><span class="tt-tag">'+esc(t("tt_prev"))+'</span></div>';
+    const pk=pickable(tt.prev.bt);
+    h+='<div class="tt-row tt-prev'+(pk?" tt-pick":"")+'"'+(pk?' data-bt="'+tt.prev.bt+'" data-line="'+esc(tt.prev.line||"")+'"':"")+'>'+(tt.prev.line?lineBadge(tt.prev.line):"")+'<span>'+fmtClock(tt.prev.bt)+'</span><span class="tt-tag">'+esc(t("tt_prev"))+'</span></div>';
   }
-  h+='<div class="tt-row tt-cur"><span>▶ '+fmtClock(dispBt)+'</span><span class="tt-tag">'+cdHtml(dispBt)+'</span></div>';
+  h+='<div class="tt-row tt-cur"><span>\u25b6 '+fmtClock(dispBt)+'</span><span class="tt-tag">'+cdHtml(dispBt)+'</span></div>';
   if(tt) for(const tr of tt.next){
-    h+='<div class="tt-row">'+(tr.line?lineBadge(tr.line):"")+'<span>'+fmtClock(tr.bt)+'</span><span class="tt-tag">'+cdHtml(tr.bt)+'</span></div>';
+    const pk=pickable(tr.bt);
+    h+='<div class="tt-row'+(pk?" tt-pick":"")+'"'+(pk?' data-bt="'+tr.bt+'" data-line="'+esc(tr.line||"")+'"':"")+'>'+(tr.line?lineBadge(tr.line):"")+'<span>'+fmtClock(tr.bt)+'</span><span class="tt-tag">'+cdHtml(tr.bt)+'</span></div>';
   }
   if(tt&&tt.next.length===0){
     h+='<div class="leg-sub" style="padding:4px 0">'+esc(t("tt_no_further"))+'</div>';
   }
   return h;
 }
-async function loadTtInto(el, leg, dispBt){
+async function loadTtInto(el, leg, dispBt, legIdx, minBt){
   try{
     const tt=await legTimetable(leg, dispBt);
-    el.innerHTML=tt?ttHtml(dispBt, tt):'<div class="leg-sub">—</div>';
-  }catch(e){ el.innerHTML='<div class="leg-sub">—</div>'; }
+    el.innerHTML=tt?ttHtml(dispBt, tt, legIdx, minBt):'<div class="leg-sub">\u2014</div>';
+    el.querySelectorAll(".tt-pick").forEach(row=>{
+      row.addEventListener("click", e=>{
+        if(typeof viewingAlt!=="undefined"&&viewingAlt) return;
+        e.stopPropagation();
+        const bt=Number(row.getAttribute("data-bt"));
+        if(bt) pickTrain(legIdx, bt, row.getAttribute("data-line")||"");
+      });
+    });
+  }catch(e){ el.innerHTML='<div class="leg-sub">\u2014</div>'; }
 }
 function tap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){} }
-function toggleTt(key, leg, dispBt, cardEl){
+function toggleTt(key, leg, dispBt, cardEl, legIdx, minBt){
   const el=cardEl.querySelector(".tt");
   if(!el) return;
   if(expandedLegs.has(key)){
@@ -1191,23 +1209,23 @@ function toggleTt(key, leg, dispBt, cardEl){
   }else{
     expandedLegs.add(key);
     el.style.display="block";
-    el.innerHTML='<div class="leg-sub">…</div>';
-    loadTtInto(el, leg, dispBt);
+    el.innerHTML='<div class="leg-sub">\u2026</div>';
+    loadTtInto(el, leg, dispBt, legIdx, minBt);
   }
   const ch=cardEl.querySelector(".chev");
   if(ch) ch.classList.toggle("open", expandedLegs.has(key));
 }
-function makeTappable(cardEl, key, leg, trip){
+function makeTappable(cardEl, key, leg, trip, legIdx, minBt){
   if(!trip) return;
   cardEl.style.cursor="pointer";
   const head=cardEl.querySelector(".leg-head");
   if(head&&!head.querySelector(".chev")){
     const s=document.createElement("span");
     s.className="chev"+(expandedLegs.has(key)?" open":"");
-    s.textContent="›";
+    s.textContent="\u203a";
     head.appendChild(s);
   }
-  cardEl.addEventListener("click", ()=>{ tap(); toggleTt(key, leg, trip.bt, cardEl); });
+  cardEl.addEventListener("click", ()=>{ tap(); toggleTt(key, leg, trip.bt, cardEl, legIdx, minBt); });
   let ttEl=cardEl.querySelector(".tt");
   if(!ttEl){
     ttEl=document.createElement("div");
@@ -1217,9 +1235,80 @@ function makeTappable(cardEl, key, leg, trip){
   }
   if(expandedLegs.has(key)){
     ttEl.style.display="block";
-    ttEl.innerHTML='<div class="leg-sub">…</div>';
-    loadTtInto(ttEl, leg, trip.bt);
+    ttEl.innerHTML='<div class="leg-sub">\u2026</div>';
+    loadTtInto(ttEl, leg, trip.bt, legIdx, minBt);
   }
+}
+/* Manual timetable picks: tapping another train in an expanded leg list
+   pins that train; every later leg is re-chained from its arrival, and
+   earlier legs stay put. A tapped "Previous" train that is still in the
+   future counts too — tapping it is the user saying they can make it,
+   even if the walk estimate says the leave-by time has passed. Pins are
+   kept in sessionStorage so the 30s auto-refresh (loadAll) re-anchors
+   on the same trains. */
+let manualPins={};
+let routeCtx=null;
+function loadManualPins(){
+  manualPins={};
+  try{
+    const saved=JSON.parse(sessionStorage.getItem("roam_pins")||"null");
+    if(saved&&saved.destIndex===S.destIndex&&saved.dir===S.dir&&saved.pins){
+      const nowSec=Date.now()/1000;
+      for(const k in saved.pins){
+        const p=saved.pins[k];
+        const bt=Number((p&&typeof p==="object")?p.bt:p);
+        if(bt&&bt>=nowSec-120) manualPins[k]=(p&&typeof p==="object")?p:{bt:bt,line:""};
+      }
+    }
+  }catch(e){}
+  return manualPins;
+}
+function saveManualPins(){
+  try{
+    if(Object.keys(manualPins).length) sessionStorage.setItem("roam_pins", JSON.stringify({destIndex:S.destIndex, dir:S.dir, pins:manualPins}));
+    else sessionStorage.removeItem("roam_pins");
+  }catch(e){}
+}
+async function pickTrain(legIdx, bt, line){
+  if(lockedPlan||viewingAlt||!routeCtx) return;
+  tap();
+  loadManualPins();
+  const newPins={};
+  for(const k in manualPins){ if(Number(k)<legIdx) newPins[k]=manualPins[k]; }
+  newPins[legIdx]={bt:bt, line:line||""};
+  manualPins=newPins;
+  saveManualPins();
+  if(legIdx===0){
+    try{ sessionStorage.setItem("roam_depart", JSON.stringify({destIndex:S.destIndex, dir:S.dir, trainBt:bt})); }catch(e){}
+  }
+  const legs=getLegs();
+  if(!legs.length||legIdx>=legs.length) return;
+  const anchorBt=(routeCtx.legResults[0]&&routeCtx.legResults[0].trip)?routeCtx.legResults[0].trip.bt:null;
+  const startAfter=(legIdx===0)?bt-1:(anchorBt!=null?anchorBt-1:null);
+  const lr=await computeRoute(legs, startAfter, manualPins);
+  const got=lr[legIdx]&&lr[legIdx].trip;
+  if(!got||Math.abs(got.bt-bt)>=120){
+    // The tapped train cannot be used (missed connection or it left the feed) — drop the pin instead of pretending.
+    delete manualPins[legIdx];
+    saveManualPins();
+  }
+  let arriveDest=null;
+  if(lr[0]&&lr[0].trip){
+    const firstBt=lr[0].trip.bt;
+    const lastTrip=lr[lr.length-1]&&lr[lr.length-1].trip;
+    arriveDest=(lastTrip&&lastTrip.at)?lastTrip.at+(routeCtx.arrWalkMin!=null?routeCtx.arrWalkMin*60:0):null;
+    let oi=departOptionsCache.findIndex(o=>Math.abs(o.trainBt-firstBt)<90);
+    if(oi>=0){
+      departOptionsCache[oi].legResults=lr;
+      if(arriveDest!=null) departOptionsCache[oi].arriveDest=arriveDest;
+      departIdx=oi;
+    }else if(routeCtx.walkMin!=null){
+      departOptionsCache.push({leaveBy:firstBt-routeCtx.walkMin*60, trainBt:firstBt, arriveDest:arriveDest, arriveEst:false, legResults:lr});
+      departIdx=departOptionsCache.length-1;
+    }
+  }
+  renderRoute(lr, routeCtx.walkMin, routeCtx.arrWalkMin, false, arriveDest);
+  renderAlts([], lr, routeCtx.arrWalkMin);
 }
 function renderLegs(legResults, box){
   legResults.forEach((r,i)=>{
@@ -1240,7 +1329,7 @@ function renderLegs(legResults, box){
       if(st.text) html+='<div class="alert-text">'+esc(st.text)+'</div>';
       d.innerHTML=html;
       box.appendChild(d);
-      makeTappable(d, "leg"+i, leg, r.trip);
+      makeTappable(d, "leg"+i, leg, r.trip, i, Math.floor(Date.now()/1000));
     }else{
       // later legs: folded into the transfer card (no duplicate leg card)
       const prev=legResults[i-1];
@@ -1263,7 +1352,7 @@ function renderLegs(legResults, box){
       if(st.text) th+='<div class="alert-text">'+esc(st.text)+'</div>';
       td.innerHTML=th;
       box.appendChild(td);
-      makeTappable(td, "leg"+i, leg, t2);
+      makeTappable(td, "leg"+i, leg, t2, i, (prev.trip&&prev.trip.at)?prev.trip.at+60:Math.floor(Date.now()/1000));
     }
     // arrival card after last leg
     if(i===legResults.length-1){
@@ -1323,6 +1412,7 @@ function restoreLock(){
 let departOptionsCache=[];
 let departIdx=0;
 function renderRoute(legResults, walkMin, arrWalkMin, isLocked, arriveDestEst){
+  if(!isLocked) routeCtx={legResults:legResults, walkMin:walkMin, arrWalkMin:arrWalkMin};
   const box=$("legs");
   box.style.display="";
   const hr=$("h-route"); if(hr) hr.style.display="";
@@ -1341,8 +1431,11 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked, arriveDestEst){
     const mins=(walkMin!=null?Math.round(walkMin):0);
     // Leave-by time follows the selected departure option when available
     let leaveBySec=null;
-    if(!isLocked&&departOptionsCache.length>=1){
+    const dispBt=(legResults[0]&&legResults[0].trip)?legResults[0].trip.bt:null;
+    if(!isLocked&&departOptionsCache.length>=1&&departOptionsCache[departIdx]&&dispBt!=null&&Math.abs(departOptionsCache[departIdx].trainBt-dispBt)<90){
       leaveBySec=departOptionsCache[departIdx].leaveBy;
+    }else if(dispBt!=null&&walkMin!=null){
+      leaveBySec=dispBt-mins*60;
     }else{
       const allTrips=legResults[0].trips||(legResults[0].trip?[legResults[0].trip]:[]);
       const nowSec=Date.now()/1000;
@@ -1401,6 +1494,7 @@ function renderRoute(legResults, walkMin, arrWalkMin, isLocked, arriveDestEst){
 }
 function selectDepartOption(i, walkMin, arrWalkMin){
   if(i<0||i>=departOptionsCache.length) return;
+  if(Object.keys(manualPins).length){ manualPins={}; saveManualPins(); }
   departIdx=i;
   try{
     sessionStorage.setItem("roam_depart", JSON.stringify({
@@ -1715,6 +1809,32 @@ async function loadAll(){
               }
             }catch(e){}
             legResults=departOptionsCache[departIdx].legResults;
+          }
+        }
+        loadManualPins();
+        if(Object.keys(manualPins).length){
+          const pinned=await computeRoute(legs, (manualPins[0]!=null?Number(manualPins[0].bt)-1:undefined), manualPins);
+          let pinOk=pinned.length===legResults.length;
+          if(pinOk){
+            for(const k in manualPins){
+              const pr=pinned[Number(k)];
+              if(!pr||!pr.trip||Math.abs(pr.trip.bt-Number(manualPins[k].bt))>=120){ pinOk=false; break; }
+            }
+          }
+          if(pinOk){
+            legResults=pinned;
+            if(pinned[0]&&pinned[0].trip){
+              const firstBt=pinned[0].trip.bt;
+              let oi=departOptionsCache.findIndex(o=>Math.abs(o.trainBt-firstBt)<90);
+              if(oi>=0){ departOptionsCache[oi].legResults=pinned; departIdx=oi; }
+              else if(walkMin!=null){
+                const lastTrip=pinned[pinned.length-1]&&pinned[pinned.length-1].trip;
+                departOptionsCache.push({leaveBy:firstBt-walkMin*60, trainBt:firstBt, arriveDest:(lastTrip&&lastTrip.at)?lastTrip.at+(arrWalkMin!=null?arrWalkMin*60:0):null, arriveEst:false, legResults:pinned});
+                departIdx=departOptionsCache.length-1;
+              }
+            }
+          }else{
+            manualPins={}; saveManualPins();
           }
         }
         const _arrEst=(departOptionsCache[departIdx]&&departOptionsCache[departIdx].arriveDest!=null)?departOptionsCache[departIdx].arriveDest:null;
