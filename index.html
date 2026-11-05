@@ -89,8 +89,8 @@ button{ -webkit-tap-highlight-color:transparent; }
 .tt-cur{font-weight:700;}
 .tt-tag{color:#8E8E93; font-size:13px;}
 .tt-cur .tt-tag{color:#007AFF;}
-.tt-pick{cursor:pointer; border-radius:8px; padding-left:6px; padding-right:6px; margin-left:-6px; margin-right:-6px; transition:transform .1s ease, background .1s ease;}
-.tt-pick:active{background:var(--press); transform:scale(.98);}
+.tt-pick,.tt-unpin{cursor:pointer; border-radius:8px; padding-left:6px; padding-right:6px; margin-left:-6px; margin-right:-6px; transition:transform .1s ease, background .1s ease;}
+.tt-pick:active,.tt-unpin:active{background:var(--press); transform:scale(.98);}
 .planned{background:#FFF9E6; border-radius:14px; padding:12px 14px; margin:10px 0;}
 .planned-head{display:flex; align-items:center; gap:6px; font-weight:700; font-size:15px;}
 .planned-item{margin-top:8px; padding-top:8px; border-top:1px solid rgba(0,0,0,0.08); cursor:pointer;}
@@ -1171,49 +1171,61 @@ function renderWeather(w, alerts){
     $("wx-strip").textContent="—";
   }
 }
-// expandable timetable: previous train + next 2 trains on card tap
+// expandable timetable: the leg's next boardable trains on card tap.
+// The option list is anchored to the leg's earliest boardable time
+// (minBt), never to the selected train, so tapping a train only moves
+// the selection — the other options stay on screen.
 const expandedLegs=new Set();
-async function legTimetable(leg, dispBt, chosenLine){
+async function legTimetable(leg, dispBt, minBt){
   const lines=legLines(leg);
   const feeds=await fetchFeeds(lines);
+  const base=(minBt!=null?minBt:Math.floor(Date.now()/1000));
   let all=[];
   for(const ln of lines){
     const feed=feeds[FEED_FOR[ln]];
     if(!feed) continue;
-    const trs=findTrips(feed, ln, leg.from, leg.to, dispBt-2400, false);
+    const trs=findTrips(feed, ln, leg.from, leg.to, base, false);
     trs.forEach(x=>x.line=ln);
     all=all.concat(trs);
   }
   all.sort((a,b)=>a.bt-b.bt);
-  let prev=null;
-  const next=[];
-  for(const tr of all){
-    if(tr.bt<dispBt-30) prev=tr;
-    else if(tr.bt>dispBt+30&&next.length<3) next.push(tr);
+  const list=all.filter(tr=>tr.bt>=base).slice(0,9);
+  if(dispBt&&!list.some(tr=>Math.abs(tr.bt-dispBt)<=30)){
+    // The selected train sits past the first 9 options: add it at its
+    // chronological spot as the current row, keeping all 9 options.
+    list.push({bt:dispBt, at:0, line:(lines[0]||"")});
+    list.sort((a,b)=>a.bt-b.bt);
   }
-  return {prev:prev, next:next};
+  return {list:list};
 }
 function ttHtml(dispBt, tt, legIdx, minBt){
   const nowSec=Date.now()/1000;
   const pickable=bt=>(bt>=minBt-30&&bt>nowSec-30);
+  const list=(tt&&tt.list)||[];
   let h="";
-  if(tt&&tt.prev){
-    const pk=pickable(tt.prev.bt);
-    h+='<div class="tt-row tt-prev'+(pk?" tt-pick":"")+'"'+(pk?' data-bt="'+tt.prev.bt+'" data-line="'+esc(tt.prev.line||"")+'"':"")+'>'+(tt.prev.line?lineBadge(tt.prev.line):"")+'<span>'+fmtClock(tt.prev.bt)+'</span><span class="tt-tag">'+esc(t("tt_prev"))+'</span></div>';
+  let hasCur=false, hasOther=false;
+  for(const tr of list){
+    if(!hasCur&&Math.abs(tr.bt-dispBt)<=30){
+      // current row: tapping it again releases the pin (see loadTtInto)
+      hasCur=true;
+      h+='<div class="tt-row tt-cur tt-unpin"><span>\u25b6 '+fmtClock(tr.bt)+'</span><span class="tt-tag">'+cdHtml(tr.bt)+'</span></div>';
+    }else{
+      hasOther=true;
+      const pk=pickable(tr.bt);
+      h+='<div class="tt-row'+(pk?" tt-pick":"")+'"'+(pk?' data-bt="'+tr.bt+'" data-line="'+esc(tr.line||"")+'"':"")+'>'+(tr.line?lineBadge(tr.line):"")+'<span>'+fmtClock(tr.bt)+'</span><span class="tt-tag">'+cdHtml(tr.bt)+'</span></div>';
+    }
   }
-  h+='<div class="tt-row tt-cur"><span>\u25b6 '+fmtClock(dispBt)+'</span><span class="tt-tag">'+cdHtml(dispBt)+'</span></div>';
-  if(tt) for(const tr of tt.next){
-    const pk=pickable(tr.bt);
-    h+='<div class="tt-row'+(pk?" tt-pick":"")+'"'+(pk?' data-bt="'+tr.bt+'" data-line="'+esc(tr.line||"")+'"':"")+'>'+(tr.line?lineBadge(tr.line):"")+'<span>'+fmtClock(tr.bt)+'</span><span class="tt-tag">'+cdHtml(tr.bt)+'</span></div>';
+  if(!hasCur){
+    h='<div class="tt-row tt-cur tt-unpin"><span>\u25b6 '+fmtClock(dispBt)+'</span><span class="tt-tag">'+cdHtml(dispBt)+'</span></div>'+h;
   }
-  if(tt&&tt.next.length===0){
+  if(!hasOther){
     h+='<div class="leg-sub" style="padding:4px 0">'+esc(t("tt_no_further"))+'</div>';
   }
   return h;
 }
 async function loadTtInto(el, leg, dispBt, legIdx, minBt){
   try{
-    const tt=await legTimetable(leg, dispBt);
+    const tt=await legTimetable(leg, dispBt, minBt);
     el.innerHTML=tt?ttHtml(dispBt, tt, legIdx, minBt):'<div class="leg-sub">\u2014</div>';
     el.querySelectorAll(".tt-pick").forEach(row=>{
       row.addEventListener("click", e=>{
@@ -1223,6 +1235,14 @@ async function loadTtInto(el, leg, dispBt, legIdx, minBt){
         if(bt) pickTrain(legIdx, bt, row.getAttribute("data-line")||"");
       });
     });
+    const curRow=el.querySelector(".tt-unpin");
+    if(curRow){
+      curRow.addEventListener("click", e=>{
+        if(typeof viewingAlt!=="undefined"&&viewingAlt) return;
+        e.stopPropagation();
+        unpinTrain(legIdx);
+      });
+    }
   }catch(e){ el.innerHTML='<div class="leg-sub">\u2014</div>'; }
 }
 function tap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){} }
@@ -1347,6 +1367,18 @@ async function pickTrain(legIdx, bt, line){
   }
   renderRoute(lr, routeCtx.walkMin, routeCtx.arrWalkMin, false, arriveDest);
   renderAlts([], lr, routeCtx.arrWalkMin);
+}
+/* Tapping the currently selected train again releases its pin, so the
+   leg falls back to the automatic next-catchable choice. */
+async function unpinTrain(legIdx){
+  if(lockedPlan||viewingAlt) return;
+  loadManualPins();
+  if(!(legIdx in manualPins)) return;
+  tap();
+  delete manualPins[legIdx];
+  if(legIdx===0){ try{ sessionStorage.removeItem("roam_depart"); }catch(e){} }
+  saveManualPins();
+  await loadAll();
 }
 function renderLegs(legResults, box){
   legResults.forEach((r,i)=>{
