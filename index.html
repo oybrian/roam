@@ -471,6 +471,8 @@ const LS_KEY = "roam_v1";
 let S = loadSettings();
 let gpsOrigin=null; // {lat, lon} when "Take me home" is active
 let gpsToDest=null; // dest index when GPS->destination mode is active
+let gpsToHome=false; // true when GPS->home mode is active (Home button)
+let gpsHomeSrc=null; // dest index whose manual legs lead home (reversed)
 let gpsSearch=false; // true when GPS->search mode is active
 let gpsMatchedIdx=null; // index into S.dests matched by GPS proximity
 function loadSettings(){
@@ -846,6 +848,45 @@ function autoLegs(){
   return best?best.legs:null;
 }
 
+// Join a manual route at the point nearest to GPS. If GPS is near a later
+// station (e.g. the transfer), drop the earlier legs instead of showing a
+// zero-length first ride. If GPS is far from every station on the route,
+// re-anchor the first leg at the nearest station serving its line.
+// Returns null when GPS is at/near the final station (caller falls through).
+function adaptManualLegsForGps(manual){
+  const JOIN_KM=0.5;
+  let bestJd=1e9, bestJ=0; // bestJ = leg index, +0.5 when nearest point is the leg's "to" station
+  for(let i=0;i<manual.length;i++){
+    const f=ST_BY_ID[manual[i].from], tt=ST_BY_ID[manual[i].to];
+    if(f){ const dd=havKm(gpsOrigin.lat,gpsOrigin.lon,f.lat,f.lon); if(dd<bestJd){bestJd=dd;bestJ=i;} }
+    if(tt){ const dd=havKm(gpsOrigin.lat,gpsOrigin.lon,tt.lat,tt.lon); if(dd<bestJd){bestJd=dd;bestJ=i+0.5;} }
+  }
+  let adapted=null;
+  if(bestJd<=JOIN_KM){
+    const startIdx=Math.ceil(bestJ);
+    if(startIdx<manual.length) adapted=manual.slice(startIdx);
+  }else{
+    const firstLine=manual[0].lines[0];
+    let bestSt=null, bestD=1e9;
+    if(firstLine){
+      for(const s of STATIONS){
+        if(!(s.lines||[]).includes(firstLine)) continue;
+        const dd=havKm(gpsOrigin.lat, gpsOrigin.lon, s.lat, s.lon);
+        if(dd<bestD){ bestD=dd; bestSt=s; }
+      }
+    }
+    if(bestSt&&bestSt.id===manual[0].to&&manual.length>1){
+      // Nearest station is the first leg's destination: that leg is done.
+      adapted=manual.slice(1);
+    }else{
+      adapted=manual.map((l,i)=>{
+        if(i===0&&bestSt) return {lines:l.lines, from:bestSt.id, to:l.to, kind:"ride"};
+        return l;
+      });
+    }
+  }
+  return (adapted&&adapted.length)?adapted:null;
+}
 function isSearchMode(){ return S.destIndex>= (S.dests||[]).length; }
 function searchDest(){ return S.searchDest||{}; }
 function getLegs(){
@@ -855,40 +896,25 @@ function getLegs(){
     const manual=(d.legs||[]).filter(l=>l&&l.from&&l.to)
       .map(l=>({lines:Array.isArray(l.lines)&&l.lines.length?l.lines.slice():(l.line?[l.line]:[]), from:l.from, to:l.to, kind:"ride"}));
     if(manual.length){
-      // Join the manual route at the point nearest to GPS. If GPS is near a
-      // later station (e.g. the transfer), drop the earlier legs instead of
-      // showing a zero-length first ride.
-      const JOIN_KM=0.5;
-      let bestJd=1e9, bestJ=0; // bestJ = leg index, +0.5 when nearest point is the leg's "to" station
-      for(let i=0;i<manual.length;i++){
-        const f=ST_BY_ID[manual[i].from], tt=ST_BY_ID[manual[i].to];
-        if(f){ const dd=havKm(gpsOrigin.lat,gpsOrigin.lon,f.lat,f.lon); if(dd<bestJd){bestJd=dd;bestJ=i;} }
-        if(tt){ const dd=havKm(gpsOrigin.lat,gpsOrigin.lon,tt.lat,tt.lon); if(dd<bestJd){bestJd=dd;bestJ=i+0.5;} }
-      }
-      let adapted=null;
-      if(bestJd<=JOIN_KM){
-        const startIdx=Math.ceil(bestJ);
-        if(startIdx<manual.length) adapted=manual.slice(startIdx);
-        // else GPS is at/near the final station: fall through to auto
-      }else{
-        // Adapt first leg: nearest station to GPS serving the first line
-        const firstLine=manual[0].lines[0];
-        let bestSt=null, bestD=1e9;
-        if(firstLine){
-          for(const s of STATIONS){
-            if(!(s.lines||[]).includes(firstLine)) continue;
-            const dd=havKm(gpsOrigin.lat, gpsOrigin.lon, s.lat, s.lon);
-            if(dd<bestD){ bestD=dd; bestSt=s; }
-          }
-        }
-        adapted=manual.map((l,i)=>{
-          if(i===0&&bestSt) return {lines:l.lines, from:bestSt.id, to:l.to, kind:"ride"};
-          return l;
-        });
-      }
-      if(adapted&&adapted.length) return adapted;
+      const adapted=adaptManualLegsForGps(manual);
+      if(adapted) return adapted;
     }
     // No manual legs: fall through to auto
+  }
+  if(gpsOrigin&&gpsToHome){
+    // GPS -> home: the Work button's logic, mirrored — take the source
+    // destination's manual legs reversed, then join/adapt them for the
+    // GPS origin exactly the same way.
+    const srcIdx=(gpsHomeSrc!=null?gpsHomeSrc:S.destIndex);
+    const d=S.dests[srcIdx]||{};
+    const manual=(d.legs||[]).filter(l=>l&&l.from&&l.to)
+      .map(l=>({lines:Array.isArray(l.lines)&&l.lines.length?l.lines.slice():(l.line?[l.line]:[]), from:l.from, to:l.to, kind:"ride"}));
+    if(manual.length){
+      const rev=manual.slice().reverse().map(l=>({lines:l.lines, from:l.to, to:l.from, kind:"ride"}));
+      const adapted=adaptManualLegsForGps(rev);
+      if(adapted) return adapted;
+      // GPS at/near the final station: fall through (same as GPS->dest).
+    }
   }
   if(gpsOrigin&&S.dir==="inbound"&&gpsMatchedIdx!=null){
     // Use matched destination's manual legs if available, else auto
@@ -1741,7 +1767,7 @@ async function loadAll(){
         const dCur=destInfoRaw();
         // When GPS "Take me home" is active at a matched destination, use manual walk reversed
         // (dest->station = walkDestMin). Otherwise auto from GPS location.
-        if(gpsOrigin&&S.dir==="inbound"&&gpsMatchedIdx!=null){
+        if(gpsOrigin&&!gpsToHome&&S.dir==="inbound"&&gpsMatchedIdx!=null){
           const md=S.dests[gpsMatchedIdx]||{};
           if(md.walkDestMin!=null) walkMin=md.walkDestMin;
         }
@@ -2270,6 +2296,10 @@ function takeMeHome(){
         }
       });
       if(gpsMatchedIdx!=null) S.destIndex=gpsMatchedIdx;
+      gpsToHome=true;
+      gpsHomeSrc=gpsMatchedIdx;
+      gpsToDest=null;
+      gpsSearch=false;
       S.dir="inbound";
       S.searchActive=false;
       viewingAlt=null;
@@ -2285,7 +2315,7 @@ function takeMeHome(){
   );
 }
 function clearGpsOrigin(){
-  gpsOrigin=null; gpsMatchedIdx=null; gpsToDest=null; gpsSearch=false;
+  gpsOrigin=null; gpsMatchedIdx=null; gpsToDest=null; gpsSearch=false; gpsToHome=false; gpsHomeSrc=null;
 }
 // Take me to a searched destination from current GPS location
 function takeMeToSearch(){
@@ -2302,6 +2332,8 @@ function takeMeToSearch(){
       gpsOrigin={lat:glat, lon:glon, name:t("current_location")};
       gpsSearch=true;
       gpsToDest=null;
+      gpsToHome=false;
+      gpsHomeSrc=null;
       S.dir="outbound";
       S.destIndex=(S.dests||[]).length;
       S.searchActive=true;
@@ -2350,6 +2382,8 @@ function takeMeToDest(idx){
       }
       gpsOrigin={lat:glat, lon:glon, name:t("current_location")};
       gpsToDest=idx;
+      gpsToHome=false;
+      gpsHomeSrc=null;
       gpsMatchedIdx=null;
       S.destIndex=idx;
       S.dir="outbound";
