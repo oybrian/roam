@@ -1180,22 +1180,30 @@ async function legTimetable(leg, dispBt, minBt){
   const lines=legLines(leg);
   const feeds=await fetchFeeds(lines);
   const base=(minBt!=null?minBt:Math.floor(Date.now()/1000));
+  // Fetch from a bit before the earlier of (earliest boardable, selected)
+  // so the selected train's predecessor is in the list too.
+  const anchor=Math.min(base, dispBt||base);
   let all=[];
   for(const ln of lines){
     const feed=feeds[FEED_FOR[ln]];
     if(!feed) continue;
-    const trs=findTrips(feed, ln, leg.from, leg.to, base, false);
+    const trs=findTrips(feed, ln, leg.from, leg.to, anchor-1800, false);
     trs.forEach(x=>x.line=ln);
     all=all.concat(trs);
   }
   all.sort((a,b)=>a.bt-b.bt);
-  const list=all.filter(tr=>tr.bt>=base).slice(0,9);
+  let list=all;
   if(dispBt&&!list.some(tr=>Math.abs(tr.bt-dispBt)<=30)){
-    // The selected train sits past the first 9 options: add it at its
-    // chronological spot as the current row, keeping all 9 options.
+    // The selected train is not in the feed list (e.g. a pin past the
+    // feed horizon): add it at its chronological spot as the current row.
     list.push({bt:dispBt, at:0, line:(lines[0]||"")});
     list.sort((a,b)=>a.bt-b.bt);
   }
+  // Small window around the selected train: 1 before, 2 after.
+  let ci=list.findIndex(tr=>Math.abs(tr.bt-dispBt)<=30);
+  if(ci<0) ci=list.findIndex(tr=>tr.bt>=base);
+  if(ci<0) ci=0;
+  list=list.slice(Math.max(0,ci-1), ci+3);
   return {list:list};
 }
 function ttHtml(dispBt, tt, legIdx, minBt){
